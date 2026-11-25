@@ -122,9 +122,9 @@
               <!-- Display Label -->
               <div class="col-md-6">
                 <h6>Name shown on pages</h6>
-                <form method="post" action="manage_annotations.php" class="d-flex gap-2 mb-2" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'update_display_label';">
+                <form method="post" action="manage_annotations.php" class="d-flex gap-2 mb-2">
                   <?= csrf_input_field() ?>
-                  <input type="hidden" name="_form_action" value="">
+                  <input type="hidden" name="_form_action" value="update_display_label">
                   <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
                   <?php $dl_id = 'dl-label-' . preg_replace('/[^A-Za-z0-9_-]/', '_', $type_name); ?>
                   <input type="text" class="form-control form-control-sm" name="display_label" maxlength="60"
@@ -150,7 +150,7 @@
                   <div>Features: <strong><?= $type_config['feature_count'] ?? 0 ?></strong></div>
                 </small>
                 <?php if (($type_config['annotation_count'] ?? 0) === 0 && ($type_config['feature_count'] ?? 0) === 0): ?>
-                <button type="button" class="btn btn-sm btn-danger mt-2" onclick="deleteType(<?= htmlspecialchars(json_encode($type_name)) ?>)">
+                <button type="button" class="btn btn-sm btn-danger mt-2" data-action="delete-type" data-type="<?= htmlspecialchars($type_name) ?>">
                   <i class="fa fa-trash"></i> Delete
                 </button>
                 <?php endif; ?>
@@ -164,42 +164,42 @@
               <div class="col-md-6">
                 <h6>Display Color</h6>
                 <div class="btn-group" role="group" style="flex-wrap: wrap; gap: 0.25rem; max-width: 300px;">
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_primary_<?= htmlspecialchars($type_name) ?>" value="primary" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'primary' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_primary_<?= htmlspecialchars($type_name) ?>" value="primary" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'primary' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_primary_<?= htmlspecialchars($type_name) ?>" style="background-color: #0d6efd; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Blue</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_secondary_<?= htmlspecialchars($type_name) ?>" value="secondary" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'secondary' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_secondary_<?= htmlspecialchars($type_name) ?>" value="secondary" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'secondary' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_secondary_<?= htmlspecialchars($type_name) ?>" style="background-color: #6c757d; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Gray</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_success_<?= htmlspecialchars($type_name) ?>" value="success" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'success' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_success_<?= htmlspecialchars($type_name) ?>" value="success" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'success' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_success_<?= htmlspecialchars($type_name) ?>" style="background-color: #198754; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Green</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_danger_<?= htmlspecialchars($type_name) ?>" value="danger" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'danger' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_danger_<?= htmlspecialchars($type_name) ?>" value="danger" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'danger' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_danger_<?= htmlspecialchars($type_name) ?>" style="background-color: #dc3545; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Red</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_warning_<?= htmlspecialchars($type_name) ?>" value="warning" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'warning' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_warning_<?= htmlspecialchars($type_name) ?>" value="warning" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'warning' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_warning_<?= htmlspecialchars($type_name) ?>" style="background-color: #ffc107; color: black; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Orange</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_info_<?= htmlspecialchars($type_name) ?>" value="info" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'info' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_info_<?= htmlspecialchars($type_name) ?>" value="info" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'info' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_info_<?= htmlspecialchars($type_name) ?>" style="background-color: #0dcaf0; color: black; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Cyan</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_light_<?= htmlspecialchars($type_name) ?>" value="light" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'light' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_light_<?= htmlspecialchars($type_name) ?>" value="light" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'light' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_light_<?= htmlspecialchars($type_name) ?>" style="background-color: #f8f9fa; color: black; border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">White</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_dark_<?= htmlspecialchars($type_name) ?>" value="dark" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'dark' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_dark_<?= htmlspecialchars($type_name) ?>" value="dark" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'dark' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_dark_<?= htmlspecialchars($type_name) ?>" style="background-color: #212529; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Black</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_indigo_<?= htmlspecialchars($type_name) ?>" value="indigo" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'indigo' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_indigo_<?= htmlspecialchars($type_name) ?>" value="indigo" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'indigo' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_indigo_<?= htmlspecialchars($type_name) ?>" style="background-color: #6366f1; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Indigo</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_purple_<?= htmlspecialchars($type_name) ?>" value="purple" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'purple' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_purple_<?= htmlspecialchars($type_name) ?>" value="purple" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'purple' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_purple_<?= htmlspecialchars($type_name) ?>" style="background-color: #a855f7; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Purple</label>
                   
-                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_pink_<?= htmlspecialchars($type_name) ?>" value="pink" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'pink' ? 'checked' : '' ?> onchange="submitColorForm(this)">
+                  <input type="radio" class="btn-check color-radio" name="color_<?= htmlspecialchars($type_name) ?>" id="color_pink_<?= htmlspecialchars($type_name) ?>" value="pink" data-type="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['color'] ?? 'secondary') === 'pink' ? 'checked' : '' ?>>
                   <label class="btn btn-sm" for="color_pink_<?= htmlspecialchars($type_name) ?>" style="background-color: #ec4899; color: white; border: none; padding: 0.375rem 0.75rem; flex: 0 0 calc(25% - 0.2rem);">Pink</label>
                 </div>
-                <form method="post" action="manage_annotations.php" class="d-none" id="colorForm_<?= htmlspecialchars($type_name) ?>" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'update_color';">
+                <form method="post" action="manage_annotations.php" class="d-none" id="colorForm_<?= htmlspecialchars($type_name) ?>">
                   <?= csrf_input_field() ?>
-                  <input type="hidden" name="_form_action" value="">
+                  <input type="hidden" name="_form_action" value="update_color">
                   <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
                   <input type="hidden" name="color" id="colorValue_<?= htmlspecialchars($type_name) ?>" value="">
                 </form>
@@ -213,9 +213,9 @@
             <div class="row">
               <div class="col-md-6">
                 <h6>Add Synonym</h6>
-                <form method="post" action="manage_annotations.php" class="d-flex gap-2 mb-2" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'add_synonym';">
+                <form method="post" action="manage_annotations.php" class="d-flex gap-2 mb-2">
                   <?= csrf_input_field() ?>
-                  <input type="hidden" name="_form_action" value="">
+                  <input type="hidden" name="_form_action" value="add_synonym">
                   <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
                   <input type="text" class="form-control form-control-sm" name="new_synonym" placeholder="Synonym name" required>
                   <button type="submit" class="btn btn-sm btn-success" <?= $file_write_error ? 'disabled' : '' ?>>
@@ -232,9 +232,9 @@
                   <?php foreach ($type_config['synonyms'] as $synonym): ?>
                   <div class="list-group-item d-flex justify-content-between align-items-center">
                     <code><?= htmlspecialchars($synonym) ?></code>
-                    <form method="post" action="manage_annotations.php" style="display: inline;" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'remove_synonym';">
+                    <form method="post" action="manage_annotations.php" style="display: inline;">
                       <?= csrf_input_field() ?>
-                      <input type="hidden" name="_form_action" value="">
+                      <input type="hidden" name="_form_action" value="remove_synonym">
                       <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
                       <input type="hidden" name="synonym_to_remove" value="<?= htmlspecialchars($synonym) ?>">
                       <button type="submit" class="btn btn-sm btn-outline-danger" <?= $file_write_error ? 'disabled' : '' ?>>

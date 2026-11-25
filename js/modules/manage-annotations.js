@@ -17,12 +17,7 @@ function submitColorForm(radioButton) {
   const colorInput = document.getElementById(`colorValue_${typeName}`);
   if (!colorInput) return;
   
-  // Set the hidden _form_action before submitting
-  const formActionInput = form.querySelector('input[name="_form_action"]');
-  if (formActionInput) {
-    formActionInput.value = 'update_color';
-  }
-  
+  // (The form's _form_action is written into the HTML: update_color.)
   colorInput.value = color;
   form.submit();
 }
@@ -209,6 +204,10 @@ function deleteType(typeName) {
     typeInput.value = typeName;
     form.appendChild(typeInput);
     
+    // Every admin POST needs the CSRF token (admin_init.php). This form was built without one
+    // until 2026-11-25, so the server refused every delete with 403.
+    addCsrfToken(form);
+
     const deleteInput = document.createElement('input');
     deleteInput.type = 'hidden';
     deleteInput.name = 'delete_annotation_type';
@@ -219,6 +218,28 @@ function deleteType(typeName) {
     form.submit();
   }
 }
+
+/** Add the page's CSRF token to a form built in JavaScript. */
+function addCsrfToken(form) {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content;
+  if (!token) return;
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'csrf_token';
+  input.value = token;
+  form.appendChild(input);
+}
+
+// A colour choice saves at once (these were inline onchange= handlers until 2026-11-25; CSP).
+document.addEventListener('change', function (e) {
+  if (e.target.classList && e.target.classList.contains('color-radio')) submitColorForm(e.target);
+});
+
+// Delete an (empty) annotation type
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('[data-action="delete-type"]');
+  if (btn) deleteType(btn.dataset.type);
+});
 
 // Handle expand button clicks
 document.addEventListener('click', function(e) {
