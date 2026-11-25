@@ -1063,3 +1063,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+
+
+/**
+ * Delete a group (the trash button on each group-description card). Posts the hidden
+ * #deleteGroupForm, which carries the CSRF token, after the admin confirms.
+ */
+function deleteGroup(groupName) {
+  if (!confirm('Delete group "' + groupName + '"?\n\nThis will remove it from ALL assembly entries and from group descriptions. This cannot be undone.')) return;
+  document.getElementById('deleteGroupName').value = groupName;
+  document.getElementById('deleteGroupForm').submit();
+}

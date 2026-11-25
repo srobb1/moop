@@ -225,4 +225,9 @@ echo render_display_page(__DIR__ . '/pages/manage_blast_linkouts.php', [
     'orphan_registrations' => $orphan_registrations,
     'message'              => $message,
     'messageType'          => $messageType,
+    // PHP -> JS: the databases offered in a new per-database row's select (CLAUDE.md §7)
+    'inline_scripts'       => [
+        'const perDbOptions = ' . json_encode(array_values($db_options), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';',
+    ],
+    'page_script'          => [moop_url_base() . '/js/manage-blast-linkouts.js'],
 ], 'Manage BLAST Linkouts');

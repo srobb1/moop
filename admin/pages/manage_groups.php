@@ -664,13 +664,6 @@ if ($gl_langs): ?>
   <input type="hidden" name="group_name" id="deleteGroupName">
 </form>
 
-<script>
-function deleteGroup(groupName) {
-  if (!confirm('Delete group "' + groupName + '"?\n\nThis will remove it from ALL assembly entries and from group descriptions. This cannot be undone.')) return;
-  document.getElementById('deleteGroupName').value = groupName;
-  document.getElementById('deleteGroupForm').submit();
-}
-</script>
 
 
 

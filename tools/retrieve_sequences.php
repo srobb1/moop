@@ -388,6 +388,18 @@ $data = [
     ]
 ];
 
+// PHP -> JS values for js/sequence-retrieval.js (CLAUDE.md §7). JSON_HEX_TAG so an ID can never
+// close the <script> element it is printed into.
+$__js_json = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+$data['inline_scripts'] = [
+    // Sample feature IDs for "Load examples"
+    'window.sampleFeatureIds = ' . json_encode(array_values($data['examples']['ids'] ?? []), $__js_json) . ';',
+    // Parent-to-children mapping, for colouring the ID box
+    'window.parentToChildren = ' . json_encode((object)$data['parent_to_children'], $__js_json) . ';',
+    // Longer lists are a download only; the ID box shows a count instead of every ID (same limit)
+    'window.retrievalShowMax = ' . (int)MOOP_RETRIEVAL_SHOW_MAX_IDS . ';',
+];
+
 // Use generic template to render
 include_once __DIR__ . '/display-template.php';
 

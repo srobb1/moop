@@ -242,9 +242,13 @@ Planosphere
       Same day: Users table rebuilt (5 columns: User = name/email under username, Access, Created, Last login, Logins;
       Stale column -> amber notice at top + per-row chip that opens the Stale card; paging only past 25 users), and
       the page's 848-line inline script moved to js/manage-users.js (dead js/modules/manage-users.js deleted).
-- [ ] **Inline JavaScript left in 4 templates (found 11-25):** admin/pages/manage_blast_linkouts.php (105 lines),
-      tools/pages/parent.php (97), tools/pages/retrieve_sequences.php (10), admin/pages/manage_groups.php (7) -> page
-      script files (CLAUDE.md §7). Then the ~154 inline on* handlers, which keep 'unsafe-inline' in the CSP. **S each / L**
+- [x] **Inline JavaScript left in templates — DONE 11-25:** manage_blast_linkouts -> js/manage-blast-linkouts.js
+      (perDbOptions via inline_scripts), retrieve_sequences values -> controller inline_scripts, manage_groups
+      deleteGroup() -> js/modules/manage-groups.js. parent.php had none left (only a JSON data island, which is fine).
+- [ ] **Inline on* handlers (~125 in PHP templates, 11-25 count)** keep 'unsafe-inline' in the CSP. Biggest:
+      manage_annotations 16, manage_organisms 13, manage_registry 12, manage_js_registry 10, manage_groups 10,
+      organism_modals/metadata 9, manage_jbrowse 9. Recipe: id/data-* + addEventListener, data-confirm + one
+      delegated submit listener (js/manage-users.js). **L**
 - [ ] **In situ tables' gene names differ from the gene pages' names (Sofia 11-25). TALK to Davies.** The "In Situ
       Hybridization Data" tables on the 17 written PLANA pages (Stages 2-8 + 9 tissue pages, site data
       metadata/pages/*.json; Gene Name + Alias columns) carry the names from the old Planosphere pages (Davies lab),

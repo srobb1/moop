@@ -331,14 +331,3 @@ echo help_modal(
     ['intro' => 'Look up sequences by feature ID across any accessible assembly.']
 );
 ?>
-
-<script>
-// Make sample feature IDs available to JavaScript
-window.sampleFeatureIds = <?= json_encode(array_values($examples['ids'])) ?>;
-
-// Pass parent-to-children mapping for display
-window.parentToChildren = <?= json_encode($parent_to_children ?? []) ?>;
-
-// Longer lists are a download only; the ID box shows a count instead of every ID (same limit)
-window.retrievalShowMax = <?= (int)$show_max_ids ?>;
-</script>
