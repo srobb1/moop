@@ -128,7 +128,7 @@ process_gff() {
                 if (zero  > 0) print "  WARNING: skipped " zero  " line(s) with coordinate <= 0 (invalid GFF3) in " fname > "/dev/stderr"
                 if (fixed > 0) print "  NOTE: swapped start>end in " fixed " record(s) in " fname > "/dev/stderr"
             }' \
-        | sort -k1,1 -k4,4n
+        | sort -T "$(dirname "$f")" -k1,1 -k4,4n   # spill beside the file, not in /tmp (4 GB here; as 6b6409c2)
     ) > "$sorted" || { echo "ERROR: could not write $sorted (permission?)" >&2; rm -f "$sorted"; return 1; }
 
     echo "Compressing: $f"
@@ -177,7 +177,7 @@ process_bed() {
         }
         END { if (fixed > 0) print "  NOTE: swapped start>end in " fixed " record(s)" > "/dev/stderr" }
     ' \
-    | sort -k1,1 -k2,2n > "$sorted" || { echo "ERROR: could not write $sorted (permission?)" >&2; rm -f "$sorted"; return 1; }
+    | sort -T "$(dirname "$f")" -k1,1 -k2,2n > "$sorted" || { echo "ERROR: could not write $sorted (permission?)" >&2; rm -f "$sorted"; return 1; }
 
     echo "Compressing: $f"
     if ! "$BGZIP" -c "$sorted" > "${f}.gz"; then

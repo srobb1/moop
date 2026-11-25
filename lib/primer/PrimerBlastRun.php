@@ -106,6 +106,11 @@ $assembly_path = dirname($gene_set_path);
 
             if (!$blast['success']) {
                 $db_notes[] = ucfirst($label) . ' search failed: ' . $blast['error'];
+                // On every pair too: the verdict must say "search failed", not count the
+                // missing products as none ("no product" -- found 11-24, fixed 11-25).
+                foreach ($parse_result['pairs'] as $i => $pair) {
+                    $results[$i]['failed'][$label] = $blast['error'];
+                }
                 continue;
             }
 
@@ -235,7 +240,7 @@ function moop_primer_transcript_genes(string $db_file, string $assembly, string 
 
 /**
  * The one quality call for a pair, and the reasons it is not clean. Returns key (specific |
- * nonspecific | none), badge (Bootstrap classes), label, reasons, isoforms_note, intended_db,
+ * nonspecific | none | failed -- the intended template's search failed; amplifiable is then null), badge (Bootstrap classes), label, reasons, isoforms_note, intended_db,
  * amplifiable (products on the intended template that would amplify), amp_contam, too_long, kb.
  */
 function primer_blast_verdict(array $r, string $search_mode, int $max_product): array
@@ -244,8 +249,22 @@ function primer_blast_verdict(array $r, string $search_mode, int $max_product): 
     // across databases counts one amplicon twice -- the cDNA product and
     // the genomic product are the same fragment seen against two
     // templates -- and a perfectly specific pair then reads "2 products".
-    $intended_db = ($search_mode === 'transcript' && isset($r['by_db']['transcript']))
+    // A cDNA check whose transcript search FAILED is still a cDNA check: falling back to the
+    // genome would judge the pair against a template the user did not ask about.
+    $intended_db = ($search_mode === 'transcript'
+                    && (isset($r['by_db']['transcript']) || isset($r['failed']['transcript'])))
         ? 'transcript' : 'genome';
+
+    // The intended template was never searched (BLAST failed): nothing was counted, so there is
+    // no verdict to give. Until 2026-11-25 this read "no product" -- an answer, and a wrong one.
+    if (isset($r['failed'][$intended_db])) {
+        return ['key' => 'failed', 'badge' => 'bg-danger', 'label' => t_plain('search failed'),
+                'reasons' => [$intended_db === 'transcript'
+                    ? t_plain('the search of the transcripts failed, so this pair was not checked; try again, and if it keeps failing tell the site administrator')
+                    : t_plain('the search of the genome failed, so this pair was not checked; try again, and if it keeps failing tell the site administrator')],
+                'isoforms_note' => null, 'intended_db' => $intended_db, 'amplifiable' => null,
+                'amp_contam' => 0, 'too_long' => [], 'kb' => PrimerPairs::amplifiableKb(), 'repetitive' => []];
+    }
 
     // ONE quality call, with the reasons it is not clean. Counts alone made
     // the reader do this arithmetic themselves, and "specific — 1 product"

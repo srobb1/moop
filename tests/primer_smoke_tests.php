@@ -1044,6 +1044,16 @@ $v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['transcript' => $same, 
 ok($v['key'] === 'nonspecific' && in_array('genomic DNA could give 2 products, not just the one matching locus', $v['reasons'], true),
    'cDNA mode still weighs genomic DNA left in the prep');
 
+// A FAILED search counted nothing: it must say so, never "no product" (found 11-24, fixed 11-25).
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => [], 'failed' => ['genome' => 'BLAST failed (exit 2)']], 'genome', 10000);
+ok($v['key'] === 'failed' && $v['label'] === 'search failed' && $v['amplifiable'] === null && count($v['reasons']) === 1,
+   'genome search failed: "search failed", not "no product"');
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['genome' => $one], 'failed' => ['transcript' => 'BLAST failed']], 'transcript', 10000);
+ok($v['key'] === 'failed' && $v['intended_db'] === 'transcript',
+   'cDNA search failed: judged as failed on the transcripts, NOT quietly against the genome');
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['transcript' => $same], 'failed' => ['genome' => 'BLAST failed']], 'transcript', 10000);
+ok($v['key'] === 'specific', 'cDNA mode, only the genome check failed: the cDNA verdict still stands');
+
 group('primer_blast_export_row — the download columns, by name');
 $row = primer_blast_export_row($pairX, 'transcript', $same['products'][0], 'specific');
 ok(array_keys($row) === ['pair', 'forward', 'reverse', 'pair_verdict', 'template', 'subject', 'start', 'end', 'product_size',

@@ -917,6 +917,13 @@ echo help_modal(
                          . ' ' . t('A long-range polymerase may still amplify it.'),
             ],
             [
+                'label' => 'search failed',
+                'color' => 'danger',
+                'html'  => true,
+                'text'  => t('The search of your template did not finish, so the pair was not checked — this is not the same as no product.')
+                         . ' ' . t('The message at the top of the results says what went wrong. Try again; if it keeps failing, tell the site administrator.'),
+            ],
+            [
                 'label' => 'Only what would really amplify counts',
                 'accent' => true,
                 'html'  => true,

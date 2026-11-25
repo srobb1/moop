@@ -228,7 +228,7 @@ Planosphere
       stale straight away. **L**
 
 ## 8. Technical leftovers (mine)
-- [ ] `lib/jbrowse/tabix_index_tracks.sh` lines 131, 180: `sort` spills to /tmp (4 GB) — same fix as
+- [x] (DONE 11-25: sort -T beside the file) `lib/jbrowse/tabix_index_tracks.sh` lines 131, 180: `sort` spills to /tmp (4 GB) — same fix as
       6b6409c2. **S**
 - [ ] Old Claude scratch folders in `/tmp/claude-1002` (2.7 GB of the 4 GB /tmp) — delete old ones. **S**
 - [ ] (Parked) Manage JBrowse re-prep as a background job instead of holding the page open — only
@@ -298,7 +298,7 @@ Planosphere
       Live version = track drawer closed + loc re-entered. Ask Sofia what is still wrong (hard-reload first); likely:
       empty space under the view, track label over the gene, cursor left in the location box. JBrowse is in
       #jb-iframe; never shrink the window (it collapses) -- crop. **S**
-- [ ] **Link to the tour from more places (Sofia 11-24).** UPDATE 11-24: two pages now -- short `tour` (6 steps,
+- [x] (DONE 11-25: "New here?" line at the top of Help, tour + walkthrough, only where the pages exist) **Link to the tour from more places (Sofia 11-24).** UPDATE 11-24: two pages now -- short `tour` (6 steps,
       home "two-minute tour") and long `gene-walkthrough` (12 steps, noggin-1), linked to each other. Next: a Help
       landing card for the walkthrough (tools/pages/help/topics.php; a card with `href` opens a NEW TAB today --
       needs same-tab for on-site pages; show only if moop_page_for_visitor() finds the page, other sites lack it). Today page.php?p=tour is linked only from the home
@@ -378,6 +378,10 @@ Planosphere
       until a retrieval runs, page-text scrape removed (1473f556). Open from this: boxed intros for figure-first and
       paper pages (Sofia unsure); 3 fake "- " sub-links under PLANA in Our Tools; SIMRbase Research menu entry for
       Embryogenesis; Zeng "type a gene" box not wanted; failed DB search in Primer BLAST still reads "no product".
+      11-25: Primer BLAST failed search -> "search failed" badge (was "no product"; a failed cDNA search was also
+      judged against the genome), 3 smoke tests red on old code. Zeng box: already gone (no form on any Zeng page).
+      Fake "- " sub-links: Planosphere's config_editable.json is apache-owned -> Sofia edits in Site Configuration
+      -> Menu (labels suggested in chat). Research menu entry: Sofia undecided (skip for now).
 - [ ] **Old SmedGD mk4 IDs in the Rosetta Stone (Sofia, 11-24):** if we can get the file that maps old SmedGD (mk4.) IDs to current genes, add it to the Rosetta Stone ID translator so people can paste these old IDs. First: find the mapping file (old server / $GENOMES / SmedGD dump). **M**
       **+ TCS IDs too (Sofia 11-25)** -- add them to the crosswalk alongside mk4 (same need: old IDs people still paste).
       **Demand seen 11-25:** one outside visitor searched six mk4 IDs in 12 minutes on 11-24 (mk4.000285.01,
@@ -500,7 +504,7 @@ Planosphere
       (notes/TRACKS_PROXY_PLAN.md). Ask the user to hard-reload. Manage JBrowse's save no longer drops it.
 - [x] DONE (checked 11-24: link_prefix is pinned in the test; suite passes on simrbase served at its root). **smoke_tests.php is not hermetic:** 4 link/menu tests read the LIVE link_prefix and fail on any
       site served at its root (simrbase since 11-19). Pin link_prefix in the test. **S**
-- [ ] **setup-check guard check is wrong for a site with its own server block** (found 11-19 after Phase B):
+- [x] (DONE 11-25: e2da7c81 compares moop-sites guard; 340d01aa default.d keyed to the folder) **setup-check guard check is wrong for a site with its own server block** (found 11-19 after Phase B):
       it compares `default.d/<site>-security.conf` to a ROOT-keyed guard once link_prefix is "/", and says
       "Re-deploy". That file still guards the old `/moop/` address — re-deploying would UNGUARD it. It should
       compare `/etc/nginx/moop-sites/<site>/guard.conf` (the new server block's include) instead, and probe
@@ -576,7 +580,7 @@ Planosphere
       All · In situ images · Movies · Stage panels (the kinds present), counts on each; the page already
       takes `?kind=movie` from a link but has no control for it. Then the Planosphere menu can link to the
       gallery with Movies picked (item above). **S**
-- [ ] **PHP warning in the request metrics (found 11-24): "Undefined array key ts", lib/request_metrics.php:271**
+- [x] (DONE 11-25: a smoke-test row lacked ts; test fixed, code right) **PHP warning in the request metrics (found 11-24): "Undefined array key ts", lib/request_metrics.php:271**
       (the costly-requests-by-address tally). Shows in every `php tests/smoke_tests.php` run. Real log rows
       always carry ts (parsed at line 217), so probably a smoke-test row built without it -- check which test
       feeds it, then either give the fixture a ts or make line 271 tolerate a row without one (and say which

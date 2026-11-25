@@ -3196,7 +3196,7 @@ ok($_p && $_p['script'] === 'tools/parent.php' && $_p['ms'] === 120 && $_p['peak
 ok(moop_metrics_parse("half\ta line\n") === null, 'a truncated line is skipped, not misread');
 $_rows = [];
 foreach ([[100, 10], [300, 50], [200, 20]] as [$ms, $mb]) $_rows[] = ['script' => 'tools/parent.php', 'ms' => $ms, 'peak_mb' => $mb, 'status' => 200, 'user' => '', 'ip' => '1.2.3.4', 'level' => 'PUBLIC'];
-$_rows[] = ['script' => 'api/moopmart_export.php', 'ms' => 5000, 'peak_mb' => 300, 'status' => 500, 'user' => 'alice', 'ip' => '9.9.9.9', 'level' => 'COLLABORATOR'];
+$_rows[] = ['ts' => 1793219250.0, 'script' => 'api/moopmart_export.php', 'ms' => 5000, 'peak_mb' => 300, 'status' => 500, 'user' => 'alice', 'ip' => '9.9.9.9', 'level' => 'COLLABORATOR'];
 $_sum = moop_metrics_summarise($_rows);
 $_pp = $_sum['by_script']['tools/parent.php'];
 ok($_sum['requests'] === 4 && $_pp['count'] === 3 && $_pp['mean_ms'] === 200 && $_pp['max_mb'] == 50 && $_pp['mean_mb'] == 26.7,

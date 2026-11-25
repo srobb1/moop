@@ -76,6 +76,28 @@ $topic_card = function (array $t) use ($site) {
         <?= t_markup('Where to go, how the data fits together, and where it comes from. How to use a particular page is on that page — look for its %s buttons.', $info_icon) ?>
         <?= ($is_admin ? t('Setting up or maintaining a site instead? That is covered separately below.') : '') . "\n" ?>
       </p>
+      <?php
+      // The guided tours, when this site has them and the visitor may see them (Sofia 11-24:
+      // the tour was linked only from the home page's Getting started panel). One line, not a
+      // card: a card with href opens a new tab, and these are pages on this site.
+      require_once __DIR__ . '/../../../lib/content_pages.php';   // help.php does not load it
+      $tour_url = moop_page_for_visitor('tour') ? moop_url('page.php?p=tour') : null;
+      $walk_url = moop_page_for_visitor('gene-walkthrough') ? moop_url('page.php?p=gene-walkthrough') : null;
+      $compass  = '<i class="fa fa-compass me-1" style="color:var(--moop-tool-header);" aria-hidden="true"></i>';
+      if ($tour_url || $walk_url): ?>
+      <p class="mb-0 mt-2">
+        <?= $compass ?><strong><?= t('New here?') ?></strong>
+        <?php if ($tour_url && $walk_url): ?>
+          <?= t_markup('Take the %1$s, or %2$s step by step.',
+                       '<a href="' . htmlspecialchars($tour_url) . '">' . t('two-minute tour') . '</a>',
+                       '<a href="' . htmlspecialchars($walk_url) . '">' . t('follow one gene through the site') . '</a>') . "\n" ?>
+        <?php elseif ($tour_url): ?>
+          <?= t_markup('Take the %s.', '<a href="' . htmlspecialchars($tour_url) . '">' . t('two-minute tour') . '</a>') . "\n" ?>
+        <?php else: ?>
+          <?= t_markup('%s step by step.', '<a href="' . htmlspecialchars($walk_url) . '">' . t('Follow one gene through the site') . '</a>') . "\n" ?>
+        <?php endif; ?>
+      </p>
+      <?php endif; ?>
     </div>
   </div>
 
