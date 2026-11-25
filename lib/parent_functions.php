@@ -717,11 +717,12 @@ function getGeneNaming($feature_id, $dbFile): array {
  * The other genes in this gene's gene set that are co-orthologs of the same human gene — the
  * full list behind the naming `copies` statement, whose sentence names at most 10.
  *
- * Rule (checked against every `copies` statement on 2026-11-25): same gene set, an identity
- * statement with the same accession (HGNC id), and that identity reads "Co-ortholog of human …".
- * The last condition matters: a gene named "Homolog of human X; orthology not shown (may be a
- * paralog)" carries the same accession but is not a co-ortholog, and the pipeline's own count
- * leaves it out too.
+ * Rule: same gene set, same identity accession (HGNC id), and the other gene has a `copies`
+ * statement of its own. Matches the pipeline's "One of N" count on all 75,990 such genes
+ * (2026-11-25). Wording-free on purpose: matching the identity text ("Co-ortholog of human X")
+ * missed 73 genes worded "Co-ortholog of the human genes of the ALDH2: ...". A gene named
+ * "Homolog of human X; orthology not shown (may be a paralog)" shares the accession but has no
+ * `copies` statement, so it is rightly left out.
  *
  * Only called for a gene that has a `copies` statement (the lookup scans gene_naming: ~30 ms on
  * the largest database, so it is not worth an index the pipeline would have to build).
@@ -741,18 +742,20 @@ function moop_gene_coorthologs($feature_id, $dbFile): array {
              WHERE i.feature_id = ? AND i.kind = 'identity'");
         $id->execute([$feature_id]);
         $me = $id->fetch(PDO::FETCH_ASSOC);
-        if (!$me || (string)$me['accession'] === '' || strpos($me['naming_text'], 'Co-ortholog of human ') !== 0) {
+        if (!$me || (string)$me['accession'] === '') {
             return $none;
         }
         $stmt = $dbh->prepare(
             "SELECT f.feature_uniquename
              FROM gene_naming i JOIN feature f ON f.feature_id = i.feature_id
              WHERE i.kind = 'identity' AND i.accession = ? AND f.gene_set_id = ?
-               AND i.naming_text LIKE 'Co-ortholog of human %' AND i.feature_id <> ?
+               AND i.feature_id <> ?
+               AND EXISTS (SELECT 1 FROM gene_naming k WHERE k.feature_id = i.feature_id AND k.kind = 'copies')
              ORDER BY f.feature_uniquename");
         $stmt->execute([$me['accession'], $me['gene_set_id'], $feature_id]);
         // "Co-ortholog of human RPL31; by OMA human ortholog" -> RPL31
-        $human = preg_match('/^Co-ortholog of human ([^;\s]+)/', $me['naming_text'], $m) ? $m[1] : null;
+        // and the second wording, "Co-ortholog of the human genes of the ALDH2: aldehyde ..." -> ALDH2
+        $human = preg_match('/^Co-ortholog of (?:human |the human genes of the )([^;:\s]+)/', $me['naming_text'], $m) ? $m[1] : null;
         return ['human' => $human, 'genes' => $stmt->fetchAll(PDO::FETCH_COLUMN)];
     } catch (PDOException $e) {
         error_log('moop_gene_coorthologs: ' . $e->getMessage());

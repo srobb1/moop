@@ -235,6 +235,11 @@ Planosphere
 - [x] DONE 11-25 (15969c4a). **Amber = attention color (Sofia 11-25):** --moop-attention-* + .btn-attention, Site Colors ->
       Attention (empty = MOOP amber, not tied to the main color); every amber use moved onto it (Expand column, MOOPmart
       prefill, stale chips, Primer Maker callout). Genome browser: amber "New window" button with a label.
+- [ ] **For compute (found 11-25): 73 identity lines read "Co-ortholog of the human genes of the ALDH2: aldehyde
+      dehydrogenase 2 family member..."** (ALDH2, MCL1, TEF, ARVCF, PALS2, AGR2/3; bats, chameleons, zebrafish,
+      killifish, wallaby) instead of "Co-ortholog of human ALDH2; by ...". Looks like a second template (gene-group
+      text pasted in). Web copes (co-ortholog list no longer depends on the wording; symbol parsed from either).
+      Tell compute. **S** (note)
 - [x] DONE 11-25. **News: 7 items for 11-24/11-25** (tour + walkthrough, Davies 2017 gallery, Anatomy & Gene Function,
       genome browser gene click, AI BLAST/primers, gene names, ID lookup + Rosetta Stone) via Admin -> News.
       HELD: "old SIMRbase links now redirect" -- post after mk4/TCS + Nvec v1g IDs are in the crosswalk.
