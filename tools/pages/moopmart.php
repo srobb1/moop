@@ -26,14 +26,14 @@
   <?php /* A link filled this page in (KEGG "Genes", a GO term page): say so, and what to do next -- the
            Preview button is far down the page, below steps 1-3 (Sofia, 2026-11-25). In the page, not a
            browser pop-up, which browsers block. */ ?>
-  <div class="alert alert-info alert-dismissible d-flex align-items-start gap-2 mb-4" role="status" id="mm-prefill-note">
+  <div class="alert alert-dismissible d-flex align-items-start gap-2 mb-4 mm-prefill-note" role="status" id="mm-prefill-note">
     <i class="fa fa-info-circle mt-1" aria-hidden="true"></i>
     <div>
       <?= t_markup('This page was filled in from the link you followed: genes with %s, with their annotation columns ticked.',
                    '<strong>' . htmlspecialchars($prefill_annotation['acc']) . '</strong>'
                    . (($prefill_annotation['src'] ?? '') !== '' ? ' (' . htmlspecialchars(moop_annotation_source_label($prefill_annotation['src'])) . ')' : '')) ?>
       <?= t('Change anything you like below, then press Preview to check the genes, and Download to get the file.') ?>
-      <div class="mt-2"><button type="button" class="btn btn-sm btn-primary" id="mm-prefill-go"><i class="fa fa-eye me-1" aria-hidden="true"></i><?= t('Go to Preview') ?></button></div>
+      <div class="mt-2"><button type="button" class="btn btn-sm mm-prefill-btn" id="mm-prefill-go"><i class="fa fa-eye me-1" aria-hidden="true"></i><?= t('Go to Preview') ?></button></div>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
   </div>
@@ -818,6 +818,12 @@
 .mm-dl-primary { background: var(--moop-action); border-color: var(--moop-action); color: #fff; font-weight: 600; }
 .mm-dl-primary:hover, .mm-dl-primary:focus { background: var(--moop-action-hover); border-color: var(--moop-action-hover); color: #fff; }
 .mm-dl-secondary { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; font-weight: 600; }
+/* "Filled in from the link you followed": soft amber, so it stands out from the teal steps without shouting.
+   Fixed colours on purpose -- it means "look here" on every site, like the data colours. */
+.mm-prefill-note { background: #fff4e3; border: 1px solid #f3cf9a; border-left: 5px solid #e9973f; color: #5b3a0c; }
+.mm-prefill-note > .fa-info-circle { color: #d07a1c; }
+.mm-prefill-btn { background: #fbe0b8; border: 1px solid #e3a65a; color: #5b3a0c; font-weight: 600; }
+.mm-prefill-btn:hover, .mm-prefill-btn:focus { background: #f6cf95; border-color: #d4893a; color: #4a2f08; }
 .mm-dl-secondary:hover, .mm-dl-secondary:focus { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
 /* The arrow carries the order (preview THEN download). Muted so it guides without competing
    with either button. */
