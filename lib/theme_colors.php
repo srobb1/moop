@@ -4,7 +4,8 @@
  *
  * css/moop.css defines MOOP's palette as variables (--moop-tool-header, --moop-tool-hover,
  * --moop-main-rgb, --moop-main-dark, --moop-main-tint, --moop-main-lightest, --moop-organism-header,
- * --moop-main-strong, --moop-search-wash, --moop-assembly-header, --moop-action, --moop-action-hover), and every main-color use on the site
+ * --moop-main-strong, --moop-search-wash, --moop-assembly-header, --moop-action, --moop-action-hover, and the
+ * --moop-attention-* family), and every main-color use on the site
  * goes through them. A site that sets 'theme_colors' in Site Configuration gets those variables
  * RECOMPUTED from its colors, emitted after the stylesheets (moop_theme_style_tag()). A site that
  * sets nothing gets nothing emitted -- simrbase's teal, byte for byte.
@@ -81,7 +82,9 @@ function moop_darken(string $hex, float $by): string {
  */
 function moop_theme_palette(array $colors): array {
     $main = strtolower(trim((string) ($colors['main'] ?? '')));
-    if (!moop_hex_rgb($main)) return [];
+    // The attention family stands on its own: a site may change it and keep MOOP's teal, or the reverse.
+    $attention = moop_attention_palette((string) ($colors['attention'] ?? ''));
+    if (!moop_hex_rgb($main)) return $attention;
     [$h, $s, $l] = moop_rgb_hsl(moop_hex_rgb($main));
 
     $deep = function (float $hue) use ($s) {
@@ -107,6 +110,30 @@ function moop_theme_palette(array $colors): array {
         '--moop-assembly-header' => $assembly,
         '--moop-action'          => $action,
         '--moop-action-hover'    => moop_darken($action, 0.12),
+    ] + $attention;
+}
+
+/**
+ * The ATTENTION family (css/moop.css --moop-attention-*, 2026-11-25) from one color, or [] when none is
+ * set (the amber in css/moop.css stands). Same hue throughout; the lightness of each shade is MOOP's
+ * own amber's (fill 85%, hover 77%, wash 95%, borders 62% / 78%, text 20% / 16%), so any hue keeps the
+ * same relationships -- text dark enough to read on every fill. Deliberately NOT derived from the main
+ * color: "look here" should not change meaning when the site's teal turns green.
+ */
+function moop_attention_palette(string $hex): array {
+    $hex = strtolower(trim($hex));
+    if (!moop_hex_rgb($hex)) return [];
+    [$h, $s] = moop_rgb_hsl(moop_hex_rgb($hex));
+    return [
+        '--moop-attention'             => $hex,
+        '--moop-attention-strong'      => moop_hsl_hex($h, min($s, 0.64), 0.53),
+        '--moop-attention-border'      => moop_hsl_hex($h, min($s, 0.71), 0.62),
+        '--moop-attention-border-soft' => moop_hsl_hex($h, $s, 0.78),
+        '--moop-attention-soft'        => moop_hsl_hex($h, min(1.0, $s + 0.10), 0.85),
+        '--moop-attention-hover'       => moop_hsl_hex($h, min(1.0, $s + 0.05), 0.77),
+        '--moop-attention-wash'        => moop_hsl_hex($h, min(1.0, $s + 0.21), 0.95),
+        '--moop-attention-text'        => moop_hsl_hex($h, $s, 0.20),
+        '--moop-attention-text-strong' => moop_hsl_hex($h, $s, 0.16),
     ];
 }
 
@@ -138,6 +165,9 @@ const MOOP_DEFAULT_PALETTE = [
     '--moop-main-lightest' => '#ecfeff', '--moop-main-strong' => '#067d94',
     '--moop-search-wash' => '#e0f7fa', '--moop-assembly-header' => '#e11d48', '--moop-action' => '#6366f1',
     '--moop-action-hover' => '#4f46e5',
+    '--moop-attention' => '#e9973f', '--moop-attention-strong' => '#d4893a', '--moop-attention-border' => '#e3a65a',
+    '--moop-attention-border-soft' => '#f3cf9a', '--moop-attention-soft' => '#fbe0b8', '--moop-attention-hover' => '#f6cf95',
+    '--moop-attention-wash' => '#fff4e3', '--moop-attention-text' => '#5b3a0c', '--moop-attention-text-strong' => '#4a2f08',
 ];
 
 /** The <style> that applies the site's palette, or '' (simrbase: nothing at all). */

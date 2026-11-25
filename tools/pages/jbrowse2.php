@@ -110,8 +110,8 @@
         <button class="btn btn-sm btn-outline-secondary" id="jb-fullscreen-btn" title="<?= t('Toggle fullscreen') ?>">
           <i class="fas fa-expand"></i>
         </button>
-        <button class="btn btn-sm btn-outline-secondary" id="jb-newwindow-btn" title="<?= t('Open in new window') ?>">
-          <i class="fas fa-external-link-alt"></i>
+        <button class="btn btn-sm btn-attention" id="jb-newwindow-btn" title="<?= t('Open the genome browser in its own window, with the whole screen for the tracks') ?>">
+          <i class="fas fa-external-link-alt me-1"></i> <?= t('New window') . "\n" ?>
         </button>
       </div>
     </div>

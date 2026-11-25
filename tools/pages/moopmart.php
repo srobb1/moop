@@ -820,10 +820,10 @@
 .mm-dl-secondary { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; font-weight: 600; }
 /* "Filled in from the link you followed": soft amber, so it stands out from the teal steps without shouting.
    Fixed colours on purpose -- it means "look here" on every site, like the data colours. */
-.mm-prefill-note { background: #fff4e3; border: 1px solid #f3cf9a; border-left: 5px solid #e9973f; color: #5b3a0c; }
+.mm-prefill-note { background: var(--moop-attention-wash); border: 1px solid var(--moop-attention-border-soft); border-left: 5px solid var(--moop-attention); color: var(--moop-attention-text); }
 .mm-prefill-note > .fa-info-circle { color: #d07a1c; }
-.mm-prefill-btn { background: #fbe0b8; border: 1px solid #e3a65a; color: #5b3a0c; font-weight: 600; }
-.mm-prefill-btn:hover, .mm-prefill-btn:focus { background: #f6cf95; border-color: #d4893a; color: #4a2f08; }
+.mm-prefill-btn { background: var(--moop-attention-soft); border: 1px solid var(--moop-attention-border); color: var(--moop-attention-text); font-weight: 600; }
+.mm-prefill-btn:hover, .mm-prefill-btn:focus { background: var(--moop-attention-hover); border-color: var(--moop-attention-strong); color: var(--moop-attention-text-strong); }
 .mm-dl-secondary:hover, .mm-dl-secondary:focus { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
 /* The arrow carries the order (preview THEN download). Muted so it guides without competing
    with either button. */

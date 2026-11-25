@@ -417,6 +417,7 @@
                             'main'     => ['Main color', 'Tool headers, buttons, links, washes, organism headers.'],
                             'assembly' => ['Assembly color', 'Assembly and gene-set headers. Empty: worked out from the main color.'],
                             'action'   => ['Action color', 'The main button on a tool page. Empty: worked out from the main color.'],
+                            'attention' => ['Attention color', 'Controls and notes to be seen first (the genome browser\'s New window, Expand column, "filled in from a link"). Empty: MOOP\'s amber. Does not follow the main color.'],
                         ];
                         ?>
                         <div id="siteColors" class="row g-3">
@@ -426,9 +427,9 @@
                                     <label class="form-label fw-semibold mb-1" for="tc-<?= $tc_key ?>"><?= htmlspecialchars($tc_label) ?></label>
                                     <div class="d-flex gap-2 align-items-center">
                                         <input type="color" class="form-control form-control-color tc-picker" data-for="tc-<?= $tc_key ?>"
-                                               value="<?= htmlspecialchars($tc_val !== '' ? $tc_val : ($tc_key === 'main' ? '#0891b2' : '#888888')) ?>" aria-label="<?= htmlspecialchars($tc_label) ?> picker">
+                                               value="<?= htmlspecialchars($tc_val !== '' ? $tc_val : ($tc_key === 'main' ? '#0891b2' : ($tc_key === 'attention' ? '#e9973f' : '#888888'))) ?>" aria-label="<?= htmlspecialchars($tc_label) ?> picker">
                                         <input type="text" class="form-control tc-hex" id="tc-<?= $tc_key ?>" name="theme_colors[<?= $tc_key ?>]"
-                                               value="<?= htmlspecialchars($tc_val) ?>" placeholder="<?= $tc_key === 'main' ? 'empty = MOOP teal' : 'empty = suggested' ?>"
+                                               value="<?= htmlspecialchars($tc_val) ?>" placeholder="<?= $tc_key === 'main' ? 'empty = MOOP teal' : ($tc_key === 'attention' ? 'empty = MOOP amber' : 'empty = suggested') ?>"
                                                pattern="#[0-9a-fA-F]{6}" maxlength="7" style="max-width: 10rem;">
                                         <button type="button" class="btn btn-sm btn-outline-secondary tc-clear" data-for="tc-<?= $tc_key ?>">Clear</button>
                                     </div>
@@ -450,6 +451,10 @@
                                     <div class="d-flex gap-2">
                                         <div class="rounded px-3 py-2 text-white small flex-fill" style="background: var(--moop-organism-header);">Organism header</div>
                                         <div class="rounded px-3 py-2 text-white small flex-fill" style="background: var(--moop-assembly-header);">Assembly header</div>
+                                    </div>
+                                    <div class="d-flex gap-2 align-items-center mt-2">
+                                        <span class="btn btn-sm btn-attention">New window</span>
+                                        <div class="rounded px-3 py-1 small flex-fill" style="background: var(--moop-attention-wash); border: 1px solid var(--moop-attention-border-soft); border-left: 4px solid var(--moop-attention); color: var(--moop-attention-text);">A note to see first</div>
                                     </div>
                                     <div class="d-flex flex-wrap gap-1 mt-2" id="tcSwatches"></div>
                                 </div>

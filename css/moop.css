@@ -68,7 +68,20 @@
   --moop-assembly-header: #e11d48;  /* assembly / gene-set header (rose) */
   --moop-action:          #6366f1;  /* the committed action on a tool page (indigo) */
   --moop-action-hover:    #4f46e5;
-  --moop-accent-amber:    #d97706;
+  /* ATTENTION -- "look here first" (2026-11-25): amber controls and notes that must stand out from the
+     teal without reading as an error (Expand column, the genome browser's New window, MOOPmart's
+     "filled in from a link", Primer Maker's "Decide this first", stale assignments). One family from
+     one color: a site sets it in Site Configuration -> Site Colors (Attention); lib/theme_colors.php
+     recomputes these. Not tied to the main color -- amber means "attention" on every theme. */
+  --moop-attention:             #e9973f;  /* the accent itself: left rules */
+  --moop-attention-strong:      #d4893a;  /* hover border, focus ring */
+  --moop-attention-border:      #e3a65a;  /* a button's border */
+  --moop-attention-border-soft: #f3cf9a;  /* a note's border */
+  --moop-attention-soft:        #fbe0b8;  /* a button's fill */
+  --moop-attention-hover:       #f6cf95;  /* that fill on hover */
+  --moop-attention-wash:        #fff4e3;  /* a note's background, a pressed toggle */
+  --moop-attention-text:        #5b3a0c;  /* text on any of the above */
+  --moop-attention-text-strong: #4a2f08;  /* text on hover */
   --moop-accent-slate:    #475569;
 
   /* The rest of the main color's family (2026-11-05). Every hard-coded teal on the site now goes
@@ -1129,9 +1142,9 @@ footer .footer-meta {
    depends on (Primer Maker: which of a gene's transcripts). Amber, the site's attention accent,
    as a wash with a left rule: it stands out from the teal tool cards without reading as an error. */
 .moop-callout-attention {
-  background-color: #fff8eb;
-  border: 1px solid #f6d28b;
-  border-left: 4px solid var(--moop-accent-amber);
+  background-color: var(--moop-attention-wash);
+  border: 1px solid var(--moop-attention-border-soft);
+  border-left: 4px solid var(--moop-attention);
 }
 
 /* field_help(..., lines: true): a popover whose text is a short list keeps its line breaks (2026-11-19). */
@@ -1191,3 +1204,14 @@ footer .footer-meta {
 .tp-page .tp-term:hover { background: rgba(var(--moop-main-rgb), 0.1); border-color: rgba(var(--moop-main-rgb), 0.6); }
 .tp-page img[src$="excel-xls-icon-2.png"] { width: 56px; height: auto; border: 0; }
 .tp-page .tp-seqs .small { display: block; margin-top: 0.35rem; overflow-wrap: anywhere; }
+
+/* An attention BUTTON (amber, css var family above): a page control that should be found first --
+   the genome browser's New window, a term page's Expand column. Use with .btn .btn-sm or alone. */
+.btn-attention, .btn-attention:visited {
+  background: var(--moop-attention-soft); border: 1px solid var(--moop-attention-border);
+  color: var(--moop-attention-text); font-weight: 600;
+}
+.btn-attention:hover, .btn-attention:focus {
+  background: var(--moop-attention-hover); border-color: var(--moop-attention-strong); color: var(--moop-attention-text-strong);
+}
+.btn-attention:focus-visible { outline: 2px solid var(--moop-attention-strong); outline-offset: 2px; box-shadow: none; }

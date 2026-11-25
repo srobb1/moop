@@ -18,7 +18,7 @@
     const NAMES = {
         '--moop-tool-header': 'main', '--moop-tool-hover': 'hover', '--moop-organism-header': 'organism',
         '--moop-main-dark': 'dark text', '--moop-main-tint': 'tint', '--moop-main-lightest': 'lightest',
-        '--moop-assembly-header': 'assembly', '--moop-action': 'action',
+        '--moop-assembly-header': 'assembly', '--moop-action': 'action', '--moop-attention': 'attention',
     };
     const field = id => document.getElementById(id);
 
@@ -27,7 +27,7 @@
         clearTimeout(timer);
         timer = setTimeout(() => {
             const body = new URLSearchParams();
-            ['main', 'assembly', 'action'].forEach(k => {
+            ['main', 'assembly', 'action', 'attention'].forEach(k => {
                 const v = field('tc-' + k).value.trim();
                 body.append(k, HEX.test(v) ? v : '');
             });

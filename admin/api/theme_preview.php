@@ -1,6 +1,6 @@
 <?php
 /**
- * The palette Site Configuration's Colors card previews: POST main / assembly / action (each
+ * The palette Site Configuration's Colors card previews: POST main / assembly / action / attention (each
  * '' or #rrggbb) -> JSON { palette, warnings, suggestion }. lib/theme_colors.php is the only place
  * the palette is worked out; the page does not repeat that arithmetic in JavaScript.
  * Admin only, CSRF-checked (admin_init.php). Saves nothing.
@@ -9,11 +9,12 @@ include_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/../../lib/theme_colors.php';
 header('Content-Type: application/json');
 $in = [];
-foreach (['main', 'assembly', 'action'] as $k) {
+foreach (['main', 'assembly', 'action', 'attention'] as $k) {
     $v = strtolower(trim((string) ($_POST[$k] ?? '')));
     $in[$k] = preg_match('/^#[0-9a-f]{6}$/', $v) ? $v : '';
 }
-$palette = moop_theme_palette($in) ?: MOOP_DEFAULT_PALETTE;
+// Unset parts fall back to MOOP's own (a site may set only the attention color, or only the main one).
+$palette = moop_theme_palette($in) + MOOP_DEFAULT_PALETTE;
 echo json_encode([
     'palette'    => $palette,
     'warnings'   => moop_theme_contrast_warnings($palette),

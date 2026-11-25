@@ -4508,8 +4508,9 @@ ok(moop_theme_palette([]) === [] && moop_theme_palette(['main' => '']) === [] &&
 $_pal = moop_theme_palette(['main' => '#339933']);
 ok(count($_pal) === 12 && $_pal['--moop-tool-header'] === '#339933' && $_pal['--moop-main-rgb'] === '51, 153, 51',
    'a main color sets the whole family, including r,g,b for the washes');
-ok(!array_diff_key(MOOP_DEFAULT_PALETTE, $_pal) && !array_diff_key($_pal, MOOP_DEFAULT_PALETTE),
-   'the palette sets exactly the variables simrbase defines -- none left teal, none extra');
+$_main_keys = array_filter(MOOP_DEFAULT_PALETTE, fn($k) => strpos($k, '--moop-attention') !== 0, ARRAY_FILTER_USE_KEY);
+ok(!array_diff_key($_main_keys, $_pal) && !array_diff_key($_pal, $_main_keys),
+   'the palette sets exactly the main-color variables simrbase defines -- none left teal, none extra, attention untouched');
 ok($_pal['--moop-search-wash'] === '#f1f8f1',
    'the home page search box is the admin header wash (7% of the main color on white), as a solid color');
 ok(moop_contrast_with_white($_pal['--moop-tool-hover']) > moop_contrast_with_white('#339933')
@@ -4526,6 +4527,33 @@ ok(moop_contrast_with_white(moop_accessible_shade('#339933')) >= 4.5 && moop_the
 $_teal = moop_theme_palette(['main' => '#0891b2']);
 ok(moop_hex_rgb($_teal['--moop-tool-hover'])[2] < 178 && $_teal['--moop-main-tint'][0] === '#',
    'worked out from MOOP\'s own teal, the family lands near the hand-picked shades');
+// Attention (amber) family, 2026-11-25: its own setting, not tied to the main color.
+$_att = moop_theme_palette(['attention' => '#7c3aed']);
+$_att_keys = array_filter(MOOP_DEFAULT_PALETTE, fn($k) => strpos($k, '--moop-attention') === 0, ARRAY_FILTER_USE_KEY);
+ok(count($_att_keys) === 9 && !array_diff_key($_att_keys, $_att) && !array_diff_key($_att, $_att_keys) && $_att['--moop-attention'] === '#7c3aed',
+   'attention alone: only the 9 attention variables, MOOP\'s teal left alone');
+ok(!array_diff_key(moop_theme_palette(['main' => '#339933', 'attention' => '#7c3aed']), MOOP_DEFAULT_PALETTE)
+   && !isset(moop_theme_palette(['main' => '#339933'])['--moop-attention']),
+   'main + attention set both families; main alone leaves the amber in css/moop.css');
+$_contrast = function (string $a, string $b): float {   // WCAG contrast of two colors
+    $L = function ($hex) { $c = array_map(fn($v) => ($v /= 255) <= 0.03928 ? $v / 12.92 : (($v + 0.055) / 1.055) ** 2.4, moop_hex_rgb($hex));
+                           return 0.2126 * $c[0] + 0.7152 * $c[1] + 0.0722 * $c[2]; };
+    [$x, $y] = [$L($a), $L($b)]; return (max($x, $y) + 0.05) / (min($x, $y) + 0.05);
+};
+$_ok = true;
+foreach (['#e9973f', '#7c3aed', '#16a34a', '#dc2626', '#ffd400'] as $_hex) {
+    $_p = moop_attention_palette($_hex);
+    foreach (['--moop-attention-soft', '--moop-attention-hover', '--moop-attention-wash'] as $_bg)
+        if ($_contrast($_p['--moop-attention-text'], $_p[$_bg]) < 4.5) $_ok = false;
+}
+ok($_ok, 'attention text reads at 4.5:1 on its fill, hover and wash, for any hue (amber, violet, green, red, yellow)');
+$_def = moop_attention_palette('#e9973f');
+ok($_contrast($_def['--moop-attention-soft'], '#fbe0b8') < 1.1 && $_contrast($_def['--moop-attention-text'], '#5b3a0c') < 1.15,
+   'worked out from MOOP\'s own amber, the family lands on the hand-picked shades');
+$_css = file_get_contents("$BASE/css/moop.css");
+$_css_ok = true;
+foreach ($_att_keys as $_k => $_v) if (!preg_match('/' . preg_quote($_k, '/') . ':\s*' . preg_quote($_v, '/') . ';/', $_css)) $_css_ok = false;
+ok($_css_ok, 'css/moop.css :root holds the same attention defaults as MOOP_DEFAULT_PALETTE');
 
 // ----------------------------------------------------------------------------
 group('Taxonomy tree: an unnamed species on a genus id keeps its own leaf');

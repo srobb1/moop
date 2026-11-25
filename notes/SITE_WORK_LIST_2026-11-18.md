@@ -346,6 +346,14 @@ Planosphere
       paper pages (Sofia unsure); 3 fake "- " sub-links under PLANA in Our Tools; SIMRbase Research menu entry for
       Embryogenesis; Zeng "type a gene" box not wanted; failed DB search in Primer BLAST still reads "no product".
 - [ ] **Old SmedGD mk4 IDs in the Rosetta Stone (Sofia, 11-24):** if we can get the file that maps old SmedGD (mk4.) IDs to current genes, add it to the Rosetta Stone ID translator so people can paste these old IDs. First: find the mapping file (old server / $GENOMES / SmedGD dump). **M**
+      **+ TCS IDs too (Sofia 11-25)** -- add them to the crosswalk alongside mk4 (same need: old IDs people still paste).
+      **Demand seen 11-25:** one outside visitor searched six mk4 IDs in 12 minutes on 11-24 (mk4.000285.01,
+      mk4.000346.04, ...), all no match (search-misses log, {cache}/metrics/search-misses-*.tsv).
+- [ ] **Nematostella JGI v1 gene IDs (`v1g…`) in the crosswalk (Sofia 11-25).** An outside visitor searched
+      `v1g110149` on 11-24 with no match. `v1g` looks like the JGI Nvec v1.0 gene models (Putnam et al. 2007,
+      https://doi.org/10.1126/science.1139158) -- confirm, find the v1 -> current (NV2) mapping, then load it like the
+      other crosswalk sources so these IDs resolve in search and the Rosetta Stone. Also missed the same week:
+      `NV2.14848`, `myoD`, `nanog` -- not yet looked into. **M**
 - [x] DONE 11-23 (root installed; checked 11-24: /bats -> 301 -> bat-genomes page). **🔴 Old SIMRbase links cited in papers (11-23) — TABLE BUILT, ROOT TO INSTALL:** metadata/legacy_redirects.json
       (73 rules: the Drupal dump url_alias table + the System Monitor outside-404 list; all 2,185 old addresses tested -> 301 -> 17 pages, all 200). Tested on a
       private nginx: every old address -> its page, attack paths 444, MOOP's own paths untouched. Builder gained

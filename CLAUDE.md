@@ -259,6 +259,11 @@ on 30 pages, and every changed file equal once the variables resolve). A new `#0
 stays teal on a green site. DATA colors are deliberately not themed (expression scale, gene-type
 chips, result-count badges) — they mean the same thing on every MOOP site.
 
+**Amber = attention** (2026-11-25): `--moop-attention-*` (fill, hover, wash, borders, text) and
+`.btn-attention`, for controls and notes to be seen first (genome browser New window, Expand column,
+MOOPmart's prefill note, stale assignments). Its own setting (Site Colors → Attention), not derived from
+the main color, so "look here" keeps its meaning on any theme. Never type an amber hex.
+
 **`tools/` pages are deliberately different** — solid teal fill with white text, bolder than the
 admin wash, because public pages announce while admin pages get out of the way. Do not "unify" the
 two. Note the tools colours are still 24 inline hex literals rather than shared classes; the plan to

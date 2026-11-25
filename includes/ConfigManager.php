@@ -1159,7 +1159,7 @@ class ConfigManager
 
                 if ($key === 'theme_colors') {
                     $c = $data[$key];
-                    $ok = is_array($c) && !array_diff(array_keys($c), ['main', 'assembly', 'action']);
+                    $ok = is_array($c) && !array_diff(array_keys($c), ['main', 'assembly', 'action', 'attention']);
                     foreach ($ok ? $c : [] as $v) {
                         if (!is_string($v) || ($v !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $v))) { $ok = false; break; }
                     }
@@ -1517,7 +1517,7 @@ class ConfigManager
             ],
             'theme_colors' => [
                 'label' => 'Site Colors',
-                'description' => 'The main color repaints the site: tool page headers, buttons, links, light washes and organism headers all follow it. Assembly and action colors are optional; left empty, they are worked out from the main color. Leave the main color empty for MOOP\'s own teal.',
+                'description' => 'The main color repaints the site: tool page headers, buttons, links, light washes and organism headers all follow it. Assembly and action colors are optional; left empty, they are worked out from the main color. Leave the main color empty for MOOP\'s own teal. The attention color (amber unless set) is for controls and notes that should be seen first; it does not follow the main color.',
                 'type' => 'theme_colors',
                 'current_value' => $this->getArray('theme_colors', []),
             ],

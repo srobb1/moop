@@ -472,6 +472,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'main'     => trim((string) ($tc['main'] ?? '')),
                 'assembly' => trim((string) ($tc['assembly'] ?? '')),
                 'action'   => trim((string) ($tc['action'] ?? '')),
+                'attention' => trim((string) ($tc['attention'] ?? '')),
             ];
         }
 

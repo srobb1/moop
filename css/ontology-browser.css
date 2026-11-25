@@ -151,7 +151,7 @@ a.ob-rec:hover, a.ob-rec:focus { background: var(--moop-tool-header); color: #ff
 .ob-gl-btn-alt:hover, .ob-gl-btn-alt:focus { background: rgba(var(--moop-main-rgb), 0.1); color: var(--moop-main-dark); }
 .ob-gl-btn:focus-visible { outline: 2px solid var(--moop-main-dark); outline-offset: 2px; }
 
-/* "Expand column" (term page, wide screens only; in the Description header or a bar of its own): soft amber, as MOOPmart's prefill button, so it
+/* "Expand column" (term page, wide screens only; in the Description header or a bar of its own): the attention amber (css/moop.css --moop-attention-*), so it
    reads as a page control rather than one of the teal data actions. Narrow screens are one column already. */
 .ob-widen-bar, .ob-widen-slot { display: none; }
 @media (min-width: 1200px) {
@@ -162,10 +162,11 @@ a.ob-rec:hover, a.ob-rec:focus { background: var(--moop-tool-header); color: #ff
   .ob-cols.ob-wide > .ob-col-term { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 0 1.5rem; align-items: start; }
 }
 .ob-widen { display: inline-flex; align-items: center; gap: 7px; padding: 5px 14px; border-radius: 6px; font-size: 0.875rem; font-weight: 600;
-  background: #fbe0b8; border: 1px solid #e3a65a; color: #5b3a0c; cursor: pointer; transition: background-color .15s, border-color .15s; }
-.ob-widen:hover, .ob-widen:focus { background: #f6cf95; border-color: #d4893a; color: #4a2f08; }
-.ob-widen:focus-visible { outline: 2px solid #d4893a; outline-offset: 2px; }
-.ob-widen[aria-pressed="true"] { background: #fff4e3; }
+  background: var(--moop-attention-soft); border: 1px solid var(--moop-attention-border); color: var(--moop-attention-text);
+  cursor: pointer; transition: background-color .15s, border-color .15s; }
+.ob-widen:hover, .ob-widen:focus { background: var(--moop-attention-hover); border-color: var(--moop-attention-strong); color: var(--moop-attention-text-strong); }
+.ob-widen:focus-visible { outline: 2px solid var(--moop-attention-strong); outline-offset: 2px; }
+.ob-widen[aria-pressed="true"] { background: var(--moop-attention-wash); }
 
 /* "Jump to" In situ data / Sequences in the Description header (long ported Planosphere pages). */
 .ob-jumps { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
