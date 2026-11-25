@@ -421,16 +421,17 @@
                        . '></svg>';
                 ?>
                 <?php if (!empty($neighbor_nav)):
-                    // The diagram is always drawn 5'->3' (a reverse-strand gene is flipped), so
-                    // upstream is on the LEFT of the picture for every gene. Which way that is in
-                    // the genome depends on strand: '+' upstream = lower coordinates. A gene with
-                    // no strand is drawn as '+', so its buttons read in genome order instead.
-                    $__stranded = in_array($neighbor_nav['strand'], ['+', '-'], true);
-                    $__up_side  = $neighbor_nav['strand'] === '-' ? 'right' : 'left';
-                    $__dn_side  = $__up_side === 'left' ? 'right' : 'left';
+                    // GENOME order on every page: « = the nearest gene at lower coordinates, » = higher
+                    // (Sofia, 2026-11-25). Until then they meant upstream/downstream of THIS gene's
+                    // strand, so where neighbours face opposite ways the same button turned round on
+                    // the next page and two genes bounced back and forth -- » could never walk on.
+                    // A reverse-strand gene's picture is drawn 5'->3' (flipped), so there « leads off
+                    // its 3' end; the hover and the help card say "lower/higher coordinates".
+                    $__up_side  = 'left';
+                    $__dn_side  = 'right';
                     // In the visitor's language: the words also reach js/modules/gene-neighbors.js via data-label.
-                    $__up_label = htmlspecialchars($__stranded ? t_plain('upstream gene') : t_plain('previous gene'));
-                    $__dn_label = htmlspecialchars($__stranded ? t_plain('downstream gene') : t_plain('next gene')); ?>
+                    $__up_label = htmlspecialchars(t_plain('previous gene'));
+                    $__dn_label = htmlspecialchars(t_plain('next gene')); ?>
                 <?php /* « and » either side of the diagram, on the side each neighbour lies (Sofia,
                          2026-10-27). They were two labelled buttons on a row of their own, which on
                          a phone needed ~300 px and stuck out of the card, so the page scrolled
@@ -1507,7 +1508,7 @@ if (!empty($gene_model)) {
     ];
     if (!empty($neighbor_nav)) {
         $gm_read_cards[] = ['label' => '« and » either side: the neighbouring genes',
-            'text' => '« goes to the gene page of the nearest gene upstream (the 5′ side, the left of the picture), » to the nearest one downstream, on the same sequence (for a gene with no strand: lower and higher positions). Hover to see which. ' . (moop_tool_on('genome_browser') ? 'Genes with no page of their own (non-coding RNAs, which are in the genome browser only) are skipped.' : 'Genes with no page of their own (non-coding RNAs) are skipped.')];
+            'text' => '« goes to the gene page of the previous gene on the same sequence (lower coordinates), » to the next one (higher coordinates), whichever strand each gene is on, so clicking the same button walks along the sequence. A reverse-strand gene is drawn 5′ to 3′, flipped, so on its page « leads off its 3′ end. ' . (moop_tool_on('genome_browser') ? 'Genes with no page of their own (non-coding RNAs, which are in the genome browser only) are skipped.' : 'Genes with no page of their own (non-coding RNAs) are skipped.')];
     }
     if (!empty($genome_seq_available) && !empty($genome_is_transcripts)) {
         $gm_read_cards[] = ['label' => 'Click a feature',

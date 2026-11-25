@@ -1,9 +1,10 @@
 /**
- * Gene page: the « and » buttons either side of the gene structure diagram (upstream and
- * downstream gene).
+ * Gene page: the « and » buttons either side of the gene structure diagram: the previous and
+ * next gene on the sequence, in GENOME order (lower / higher coordinates) whatever the strand,
+ * so pressing the same button walks along the sequence (2026-11-25; strand-relative buttons
+ * bounced between two genes facing opposite ways).
  *
- * Each button carries its genome side (data-side="left" | "right"); the page has already worked
- * out which side is upstream from the gene's strand. A click asks api/gene_neighbor.php for the
+ * Each button carries its genome side (data-side="left" | "right"). A click asks api/gene_neighbor.php for the
  * nearest gene on that side that has a gene page, then goes there. The lookup reads the gene
  * set's whole coordinates file (~0.25 s on the largest), so it runs on the click, never on load.
  *
@@ -16,7 +17,7 @@
     const status  = box.querySelector('.gene-neighbor-status');
     const buttons = box.querySelectorAll('.gene-neighbor-btn');
 
-    // "Go to the upstream gene page" on hover, at once: no delay and no fade (Sofia found the
+    // "Go to the next gene page" on hover, at once: no delay and no fade (Sofia found the
     // default fade slow; the plain title attribute shows only after a pause of its own)
     if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
         buttons.forEach(b => new bootstrap.Tooltip(b, {animation: false, delay: {show: 0, hide: 0}}));

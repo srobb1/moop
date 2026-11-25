@@ -72,9 +72,12 @@ foreach (array_chunk($candidates, 100) as $batch) {
         if (!isset($known[$g['gene_id']])) { $skipped++; continue; }
         $self = $beside['self'];
         echo json_encode([
-            'url'     => "/{$config->getString('site')}/tools/parent.php?" . http_build_query([
+            // moop_url(), never "/{site}/": the site setting is the folder name, not the start of
+            // a link (CLAUDE.md 3b). On simrbase (served at its root) this sent every click through
+            // the old-address redirect to /moop/... (found 2026-11-25).
+            'url'     => moop_url('tools/parent.php?' . http_build_query([
                              'organism' => $organism, 'uniquename' => $g['gene_id'],
-                             'assembly' => $assembly, 'gene_set' => $gene_set]),
+                             'assembly' => $assembly, 'gene_set' => $gene_set])),
             'gene_id' => $g['gene_id'],
             'gap'     => $side === 'right' ? $g['start'] - $self['end'] - 1 : $self['start'] - $g['end'] - 1,
             'skipped' => $skipped,
