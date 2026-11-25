@@ -5567,6 +5567,18 @@ ok(blast_program_presets('blastn-short')['evalue'] === '1000' && blast_program_p
 $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_bj));
 
+group('saveJsonFile: a failed save is never reported as written (2026-11-25)');
+require_once __DIR__ . '/../lib/functions_json.php';
+$_sj = sys_get_temp_dir() . '/moop_savejson_' . getmypid() . '.json';
+file_put_contents($_sj, '{"keep": true}');
+$_old_log = ini_set('error_log', '/dev/null');
+ok(saveJsonFile($_sj, ['bad' => "\xB1\x31"]) === false, 'an encode failure (bad UTF-8) returns false');
+ok(file_get_contents($_sj) === '{"keep": true}', '...and leaves the file as it was (it used to write it EMPTY)');
+ok(saveJsonFile(sys_get_temp_dir() . '/no_such_dir_' . getmypid() . '/x.json', ['a' => 1]) === false, 'an unwritable path returns false');
+ini_set('error_log', (string) $_old_log);
+ok(saveJsonFile($_sj, ['a' => 1]) > 0 && json_decode(file_get_contents($_sj), true) === ['a' => 1], 'a good save writes and returns the byte count');
+@unlink($_sj);
+
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";

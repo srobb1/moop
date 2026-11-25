@@ -69,6 +69,22 @@ if (empty($annotation_config['annotation_type_order']) && !empty($annotation_con
 $message = "";
 $messageType = "";
 
+// Every save goes through this (2026-11-25): until then 13 of the 14 saves ignored the result and
+// reported success whether or not the file was written -- the silent-write-failure pattern
+// (CLAUDE.md §11). On failure the message says so, and the config is re-read from disk so the
+// page shows what is really saved, not the change that was lost.
+$save_config = function (string $ok_message, string $ok_type = 'success') use (&$annotation_config, $config_file, &$message, &$messageType): bool {
+    if (saveJsonFile($config_file, $annotation_config) !== false) {
+        $message = $ok_message;
+        $messageType = $ok_type;
+        return true;
+    }
+    $message = 'Not saved: could not write annotation_config.json. Nothing was changed (see the error log).';
+    $messageType = 'danger';
+    $annotation_config = loadJsonFile($config_file, []) ?: $annotation_config;
+    return false;
+};
+
 // PHASE 2: Query databases and sync annotation types (per-organism, only re-query changed databases)
 $all_db_annotation_types = [];
 $sync_status = [];
@@ -78,8 +94,11 @@ try {
 
     [$annotation_config, $ann_updated] = update_annotation_config_modular($annotation_config, $organisms_path);
 
-    if ($ann_updated > 0) {
-        saveJsonFile($config_file, $annotation_config);
+    // The page-load sync with the databases: quiet when it works, says so when it cannot save
+    // (the counts shown are then this visit's only, and will be recomputed next time).
+    if ($ann_updated > 0 && saveJsonFile($config_file, $annotation_config) === false) {
+        $message = 'Could not save the updated annotation counts to annotation_config.json (see the error log). The page shows them, but they are not stored.';
+        $messageType = 'warning';
     }
 
     // Reconstruct aggregated types from per-organism cache for the synonym check below
@@ -121,10 +140,8 @@ try {
         }
 
         if (!empty($deactivated_synonyms)) {
-            saveJsonFile($config_file, $annotation_config);
             $deactivated_list = implode(', ', array_map(fn($d) => "'{$d['synonym']}'", $deactivated_synonyms));
-            $message = "⚠️ Warning: The following synonyms were deactivated because they are now annotation types in the database: $deactivated_list";
-            $messageType = "warning";
+            $save_config("⚠️ Warning: The following synonyms were deactivated because they are now annotation types in the database: $deactivated_list", 'warning');
         }
     }
 } catch (Exception $e) {
@@ -145,9 +162,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
                     $annotation_config['analysis_descriptions'][$section_name] = $section_desc;
                 }
                 
-                saveJsonFile($config_file, $annotation_config);
-                $message = "Section added successfully!";
-                $messageType = "success";
+                $save_config("Section added successfully!");
             } else {
                 $message = "Section already exists.";
                 $messageType = "warning";
@@ -159,9 +174,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
         $new_order = json_decode($_POST['order_data'], true);
         if ($new_order) {
             $annotation_config['analysis_order'] = $new_order;
-            saveJsonFile($config_file, $annotation_config);
-            $message = "Order updated successfully!";
-            $messageType = "success";
+            $save_config("Order updated successfully!");
         }
     }
     
@@ -171,9 +184,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
         
         if (!empty($section)) {
             $annotation_config['analysis_descriptions'][$section] = $description;
-            saveJsonFile($config_file, $annotation_config);
-            $message = "Description updated successfully!";
-            $messageType = "success";
+            $save_config("Description updated successfully!");
         }
     }
     
@@ -191,9 +202,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
                 }
             }
             
-            saveJsonFile($config_file, $annotation_config);
-            $message = "Section deleted successfully!";
-            $messageType = "success";
+            $save_config("Section deleted successfully!");
         }
     }
     
@@ -211,9 +220,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
             // Also update annotation_type_order for display purposes
             $annotation_config['annotation_type_order'] = $new_type_order;
             
-            saveJsonFile($config_file, $annotation_config);
-            $message = "Annotation type order updated successfully!";
-            $messageType = "success";
+            $save_config("Annotation type order updated successfully!");
         }
     }
 }
@@ -237,18 +244,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
                 
                 if (!in_array($new_synonym, $annotation_config['annotation_types'][$type_name]['synonyms'])) {
                     $annotation_config['annotation_types'][$type_name]['synonyms'][] = $new_synonym;
-                    saveJsonFile($config_file, $annotation_config);
-                    $message = "Added '$new_synonym' as synonym for '$type_name'";
-                    $messageType = "success";
+                    $save_config("Added '$new_synonym' as synonym for '$type_name'");
                 } else {
                     $message = "This synonym already exists for '$type_name'";
                     $messageType = "warning";
                 }
             } else if (!in_array($new_synonym, $annotation_config['annotation_types'][$type_name]['synonyms'])) {
                 $annotation_config['annotation_types'][$type_name]['synonyms'][] = $new_synonym;
-                saveJsonFile($config_file, $annotation_config);
-                $message = "Added '$new_synonym' as synonym for '$type_name'";
-                $messageType = "success";
+                $save_config("Added '$new_synonym' as synonym for '$type_name'");
             } else {
                 $message = "This synonym already exists for '$type_name'";
                 $messageType = "warning";
@@ -266,9 +269,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
                 if ($key !== false) {
                     unset($annotation_config['annotation_types'][$type_name]['synonyms'][$key]);
                     $annotation_config['annotation_types'][$type_name]['synonyms'] = array_values($annotation_config['annotation_types'][$type_name]['synonyms']);
-                    saveJsonFile($config_file, $annotation_config);
-                    $message = "Removed '$synonym_to_remove' as synonym of '$type_name'";
-                    $messageType = "success";
+                    $save_config("Removed '$synonym_to_remove' as synonym of '$type_name'");
                 }
             }
         }
@@ -289,7 +290,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
                 $annotation_config['annotation_types'][$type_name]['display_label'] = $display_label;
                 $shown = $display_label;
             }
-            if (saveJsonFile($config_file, $annotation_config)) {
+            if (saveJsonFile($config_file, $annotation_config) !== false) {
                 $message = "Pages now call '$type_name' \"$shown\"";
                 $messageType = "success";
             } else {
@@ -308,9 +309,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
         
         if (!empty($type_name) && in_array($color, $allowed_colors) && isset($annotation_config['annotation_types'][$type_name])) {
             $annotation_config['annotation_types'][$type_name]['color'] = $color;
-            saveJsonFile($config_file, $annotation_config);
-            $message = "Updated color for '$type_name' to '$color'";
-            $messageType = "success";
+            $save_config("Updated color for '$type_name' to '$color'");
         }
     }
     
@@ -320,9 +319,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
         
         if (!empty($type_name) && isset($annotation_config['annotation_types'][$type_name])) {
             $annotation_config['annotation_types'][$type_name]['description'] = $description;
-            saveJsonFile($config_file, $annotation_config);
-            $message = "Updated description for '$type_name'";
-            $messageType = "success";
+            $save_config("Updated description for '$type_name'");
         }
     }
     
@@ -335,9 +332,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
             // Only allow delete if 0 annotations and 0 features
             if (($type_config['annotation_count'] ?? 0) === 0 && ($type_config['feature_count'] ?? 0) === 0) {
                 unset($annotation_config['annotation_types'][$type_name]);
-                saveJsonFile($config_file, $annotation_config);
-                $message = "Successfully deleted annotation type '$type_name'";
-                $messageType = "success";
+                $save_config("Successfully deleted annotation type '$type_name'");
             } else {
                 $message = "Cannot delete '$type_name' - it has annotations or features in the database";
                 $messageType = "danger";

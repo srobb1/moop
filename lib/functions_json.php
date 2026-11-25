@@ -162,7 +162,17 @@ function decodeJsonString($json_string, $as_array = true) {
  * @return int|false Number of bytes written, or false on failure
  */
 function saveJsonFile($path, $data) {
-    return file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT));
+    // An encode failure (bad UTF-8, a NaN) used to go straight to file_put_contents as false,
+    // which wrote an EMPTY file and returned 0 -- not false, so even a caller that checked the
+    // result reported the wipe as a save (found 2026-11-25). Refuse instead, and say why.
+    $json = json_encode($data, JSON_PRETTY_PRINT);
+    if ($json === false) {
+        error_log('saveJsonFile: not written, JSON encode failed for ' . $path . ': ' . json_last_error_msg());
+        return false;
+    }
+    $bytes = @file_put_contents($path, $json, LOCK_EX);
+    if ($bytes === false) error_log('saveJsonFile: could not write ' . $path);
+    return $bytes;
 }
 
 /**

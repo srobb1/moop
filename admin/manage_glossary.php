@@ -40,8 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$file_write_error) {
             $flash = ['type' => 'danger', 'msg' => 'A term "' . htmlspecialchars($term) . '" already exists.'];
         } else {
             $terms[$term] = $def;
-            saveJsonFile($glossary_file, $terms);
-            $flash = ['type' => 'success', 'msg' => 'Added "' . htmlspecialchars($term) . '".'];
+            $flash = saveJsonFile($glossary_file, $terms) === false
+                ? ['type' => 'danger', 'msg' => 'Not saved: could not write the glossary file. Nothing was changed.']
+                : ['type' => 'success', 'msg' => 'Added "' . htmlspecialchars($term) . '".'];
         }
 
     } elseif ($action === 'update') {
@@ -54,8 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$file_write_error) {
             $flash = ['type' => 'danger', 'msg' => 'A definition cannot be empty — delete the term instead.'];
         } else {
             $terms[$key] = $def;
-            saveJsonFile($glossary_file, $terms);
-            $flash = ['type' => 'success', 'msg' => 'Updated "' . htmlspecialchars($key) . '".'];
+            $flash = saveJsonFile($glossary_file, $terms) === false
+                ? ['type' => 'danger', 'msg' => 'Not saved: could not write the glossary file. Nothing was changed.']
+                : ['type' => 'success', 'msg' => 'Updated "' . htmlspecialchars($key) . '".'];
         }
 
     } elseif ($action === 'delete') {
@@ -63,8 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$file_write_error) {
         $key  = glossary_resolve_key($terms, $term);
         if ($key !== null) {
             unset($terms[$key]);
-            saveJsonFile($glossary_file, $terms);
-            $flash = ['type' => 'success', 'msg' => 'Deleted "' . htmlspecialchars($key) . '".'];
+            $flash = saveJsonFile($glossary_file, $terms) === false
+                ? ['type' => 'danger', 'msg' => 'Not saved: could not write the glossary file. Nothing was changed.']
+                : ['type' => 'success', 'msg' => 'Deleted "' . htmlspecialchars($key) . '".'];
         }
     }
 
