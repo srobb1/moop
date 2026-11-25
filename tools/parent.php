@@ -360,6 +360,16 @@ if ($protein_ids && $protein_fasta && moop_fasta_index_available($protein_fasta)
 // naming tables (most, for now), which simply leaves the card as it was.
 $gene_naming = getGeneNaming($feature_id, $db);
 
+// Co-orthologs: the other genes here that share this gene's human ortholog. The `copies`
+// statement names at most 10 as plain text; the card lists them all, each linked to its gene page.
+$gene_coorthologs = ['human' => null, 'genes' => []];
+foreach ($gene_naming['statements'] as $__s) {
+    if ($__s['kind'] === 'copies') {
+        $gene_coorthologs = moop_gene_coorthologs($feature_id, $db);
+        break;
+    }
+}
+
 // The isoform the name was taken from, when the pipeline says (a `protein` statement, only on
 // genes with more than one protein and evidence pointing at one). Marked in the tree, and the
 // statement links to that transcript's annotations.
@@ -698,6 +708,7 @@ echo render_display_page(
         'annotated_isoform_count'    => $annotated_isoform_count,
         'all_annotations' => $all_annotations,
         'gene_naming' => $gene_naming,
+        'gene_coorthologs' => $gene_coorthologs,
         'naming_isoform' => $naming_isoform,
         'protein_lengths' => $protein_lengths,
         'longest_protein' => $longest_protein,

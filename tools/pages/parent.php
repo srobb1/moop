@@ -143,7 +143,10 @@
                     . (!empty($naming_lead['accession']) ? ' (' . $naming_lead['accession'] . ')' : '');
             }
             foreach ($naming_list as $__s) {
-                $__name[] = ($__name ? '  - ' : '') . moop_gene_naming_label($__s['kind']) . ': ' . $__s['naming_text'];
+                $__txt = ($__s['kind'] === 'copies' && !empty($gene_coorthologs['genes']))
+                    ? implode(', ', $gene_coorthologs['genes']) . ' (in this genome)'
+                    : $__s['naming_text'];
+                $__name[] = ($__name ? '  - ' : '') . moop_gene_naming_label($__s['kind']) . ': ' . $__txt;
             }
 
             $__link = moop_public_url('tools/parent.php') . '?' . http_build_query(array_filter([
@@ -235,6 +238,32 @@
                          characters. */ ?>
                 <dl class="gene-naming-list">
                     <?php foreach ($naming_list as $__s): ?>
+                        <?php if ($__s['kind'] === 'copies' && !empty($gene_coorthologs['genes'])):
+                            // Built here, not the pipeline's sentence: that one stops at 10 names
+                            // as plain text. Every co-ortholog, each a link to its gene page.
+                            $__co_links = implode(', ', array_map(function ($__g) use ($annotation_link_ctx) {
+                                $__u = moop_same_organism_hit_url($annotation_link_ctx, $__g);
+                                return $__u !== null
+                                    ? '<a href="' . htmlspecialchars($__u) . '">' . htmlspecialchars($__g) . '</a>'
+                                    : htmlspecialchars($__g);
+                            }, $gene_coorthologs['genes']));
+                            $__co_n = count($gene_coorthologs['genes']);
+                            $__co_h = $gene_coorthologs['human'] !== null ? htmlspecialchars($gene_coorthologs['human']) : null; ?>
+                        <dt class="gn-kind-copies"><?= gloss('co-ortholog', 'Co-orthologs') ?></dt>
+                        <dd class="gn-kind-copies">
+                            <span class="gn-text"><?php
+                                if ($__co_h !== null) {
+                                    echo $__co_n === 1
+                                        ? t_markup('1 other gene in this genome is also a co-ortholog of human %1$s: %2$s', $__co_h, $__co_links)
+                                        : t_markup('%1$s other genes in this genome are also co-orthologs of human %2$s: %3$s', number_format($__co_n), $__co_h, $__co_links);
+                                } else {
+                                    echo $__co_n === 1
+                                        ? t_markup('1 other gene in this genome is a co-ortholog of the same human gene: %s', $__co_links)
+                                        : t_markup('%1$s other genes in this genome are co-orthologs of the same human gene: %2$s', number_format($__co_n), $__co_links);
+                                } ?></span>
+                            <button type="button" class="gn-more" hidden><?= t('more') ?></button>
+                        </dd>
+                        <?php continue; endif; ?>
                         <dt class="gn-kind-<?= htmlspecialchars($__s['kind']) ?>"><?= htmlspecialchars(moop_gene_naming_label($__s['kind'])) ?></dt>
                         <dd class="gn-kind-<?= htmlspecialchars($__s['kind']) ?>">
                             <span class="gn-text"><?= htmlspecialchars($__s['naming_text']) ?><?php

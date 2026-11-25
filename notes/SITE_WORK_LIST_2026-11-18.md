@@ -623,7 +623,7 @@ Planosphere
       (scripts/reset_password.php, scripts/spatial_atlas_from_endoatlas.php, setup-check.php); escapeHtml-style
       helpers in many JS files (36 JS names are defined in more than one file). Dead code was cleared 11-25
       (65 functions + js/modules/manage-registry.js), so what is left is all in use. **M-L**
-- [ ] **Co-orthologs: show the other genes** (Sofia 11-25: "if a gene is called a co-ortholog, other genes in
+- [x] **Co-orthologs: show the other genes** (Sofia 11-25: "if a gene is called a co-ortholog, other genes in
       this data set are orthologs to the same human gene -- can we see those other genes?"). TODAY: the gene
       page's naming list has a "Copies" statement ("One of 3 genes in this genome named after it (the others:
       dd_Smed_v6_84813_0, ...)") -- PLAIN TEXT, IDs not links, capped at 10 ("and 11 more"; Smed max 22), and
@@ -635,3 +635,16 @@ Planosphere
       set). ⚠️ Wording: in OMA "co-ortholog" covers BOTH directions -- many:1 (several genes here, one human
       gene: what Sofia means) and 1:many (one gene here, several human genes, e.g. "co-ortholog of ANO1 and
       ANO2"). The page should say which, so the list makes sense. TALK (layout), then **S-M**
+      11-25 CHECKED: every gene with a Copies statement (75,990, all organisms) has Identity "Co-ortholog of
+      human X" -- the list IS the other many:1 co-orthologs carrying the name. 1:many genes say "Co-ortholog
+      of N human genes (...)" and have no Copies line. So the direction is already in the data; it is just
+      not explained. All of it is WEB work (no compute change): link the IDs, full list (same identity
+      accession in the gene set, not capped at 10), label Copies -> "Co-orthologs", glossary term
+      "co-ortholog" for both directions. Sofia: build it.
+      DONE 11-25: label "Co-orthologs" (glossary word, popover explains many:1 vs 1:many); the line is built by
+      the web -- "N other genes in this genome are also co-orthologs of human X: <links>", ALL of them
+      (moop_gene_coorthologs(): same gene set + same identity accession + identity "Co-ortholog of human";
+      a "Homolog ... may be a paralog" gene with the same HGNC id is rightly left out). Copy-text lists all.
+      Glossary entry in simrbase + glossary.json.example; planosphere/cuttingclass glossaries are apache-
+      owned -> add via Manage Glossary if wanted. NOT done: OMA-paired genes named by OTHER evidence (the
+      "All N genes paired with human X" idea above) -- a later option.
