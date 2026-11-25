@@ -851,35 +851,6 @@ function sendFileDownload($content, $sequence_type, $file_format = 'fasta', arra
 }
 
 /**
- * Build organism-filtered list of accessible assembly sources
- * 
- * Filters nested sources array by organism list
- * 
- * @param array $sources_by_group - Nested array from getAccessibleGeneSets()
- * @param array $filter_organisms - Optional organism filter list
- * @return array - Nested array [group][organism][...assemblies]
- */
-function buildFilteredSourcesList($sources_by_group, $filter_organisms = []) {
-    $filtered = [];
-    
-    foreach ($sources_by_group as $group_name => $organisms) {
-        foreach ($organisms as $organism => $assemblies) {
-            // Skip if organism filter is set and this organism is not in it
-            if (!empty($filter_organisms) && !in_array($organism, $filter_organisms)) {
-                continue;
-            }
-            
-            if (!isset($filtered[$group_name])) {
-                $filtered[$group_name] = [];
-            }
-            $filtered[$group_name][$organism] = $assemblies;
-        }
-    }
-    
-    return $filtered;
-}
-
-/**
  * Flatten nested sources array for sequential processing
  * 
  * Converts nested [group][organism][...sources] structure to flat list

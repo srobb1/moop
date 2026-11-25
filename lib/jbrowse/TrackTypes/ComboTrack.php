@@ -325,8 +325,4 @@ class ComboTrack implements TrackTypeInterface
         return false;
     }
     
-    public function getIndexExtensions()
-    {
-        return [];
-    }
 }

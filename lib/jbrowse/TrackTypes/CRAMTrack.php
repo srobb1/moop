@@ -136,14 +136,6 @@ class CramTrack extends BaseTrack implements TrackTypeInterface
     }
     
     /**
-     * Get index extensions
-     */
-    public function getIndexExtensions()
-    {
-        return ['.crai'];
-    }
-    
-    /**
      * Find CRAI index file
      */
     private function findCraiIndex(string $cramPath): ?string

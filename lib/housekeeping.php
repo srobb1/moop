@@ -282,14 +282,6 @@ function housekeeping_requested_at(): ?int {
 }
 
 /**
- * Seconds since the last run started, or null if it has never run.
- */
-function housekeeping_age_seconds(): ?int {
-    $last = @filemtime(housekeeping_marker_file()) ?: 0;
-    return $last ? max(0, time() - $last) : null;
-}
-
-/**
  * AUTO PATH — called from admin_init.php on every admin page load.
  *
  * Hydrates the session cheaply, then, if due, launches the work in a DETACHED BACKGROUND

@@ -4,6 +4,11 @@
  */
 
 let registryData = null;
+// Each rendered .function-item -> its own function object. Filters used to look a function
+// up by NAME across all files and take the first hit, so with a name defined in several
+// files (36 JS names, PHP methods like get/__construct) category, type, parameter and
+// return filters judged an item by some other function's data.
+const funcByItem = new WeakMap();
 
 // One setup, run once: load the data, render, and bind every control.
 // (Shared by Manage Registry and Manage JS Registry -- both templates use the same ids.)
@@ -83,6 +88,7 @@ function renderRegistry() {
             const item = document.createElement('div');
             item.className = 'function-item';
             item.setAttribute('data-func', func.name);
+            funcByItem.set(item, func);
             
             // Function header with toggle
             const funcHeader = document.createElement('div');
@@ -393,38 +399,6 @@ function toggleAllFiles() {
 }
 
 /**
- * Expand all files
- */
-function expandAllFiles() {
-    document.querySelectorAll('.functions-list').forEach(list => {
-        list.classList.add('open');
-        list.style.maxHeight = '10000px';
-        list.style.overflow = 'visible';
-        const header = list.previousElementSibling;
-        if (header) {
-            const arrow = header.querySelector('.expand-arrow');
-            if (arrow) arrow.textContent = '▼';
-        }
-    });
-}
-
-/**
- * Collapse all files
- */
-function collapseAllFiles() {
-    document.querySelectorAll('.functions-list').forEach(list => {
-        list.classList.remove('open');
-        list.style.maxHeight = '0';
-        list.style.overflow = 'hidden';
-        const header = list.previousElementSibling;
-        if (header) {
-            const arrow = header.querySelector('.expand-arrow');
-            if (arrow) arrow.textContent = '▶';
-        }
-    });
-}
-
-/**
  * Filter/search registry
  */
 function filterRegistry() {
@@ -451,20 +425,9 @@ function filterRegistry() {
             const code = item.querySelector('.function-code') ? item.querySelector('.function-code').textContent.toLowerCase() : '';
             const comment = item.querySelector('.function-comment') ? item.querySelector('.function-comment').textContent.toLowerCase() : '';
             
-            // Get category and tags from the function object in registry data
-            let funcCategory = '';
-            let funcTags = [];
-            
-            if (registryData && registryData.files) {
-                for (let file of registryData.files) {
-                    const func = file.functions.find(f => f.name.toLowerCase() === funcName);
-                    if (func) {
-                        funcCategory = func.category || '';
-                        funcTags = func.tags || [];
-                        break;
-                    }
-                }
-            }
+            const itemFunc = funcByItem.get(item) || {};
+            const funcCategory = itemFunc.category || '';
+            const funcTags = itemFunc.tags || [];
             
             let match = true;
             
@@ -481,32 +444,16 @@ function filterRegistry() {
                     textMatch = comment.includes(term);
                 } else if (mode === 'parameters') {
                     // Search in parameters from registry data
-                    if (registryData && registryData.files) {
-                        for (let file of registryData.files) {
-                            const func = file.functions.find(f => f.name.toLowerCase() === funcName);
-                            if (func && Array.isArray(func.parameters) && func.parameters.length > 0) {
-                                textMatch = func.parameters.some(param => {
-                                    if (!param) return false;
-                                    return (param.name && param.name.toLowerCase().includes(term)) || 
-                                           (param.type && param.type.toLowerCase().includes(term)) || 
-                                           (param.description && param.description.toLowerCase().includes(term));
-                                });
-                            }
-                            if (textMatch) break;
-                        }
+                    if (Array.isArray(itemFunc.parameters)) {
+                        textMatch = itemFunc.parameters.some(param => param && (
+                            (param.name && param.name.toLowerCase().includes(term)) ||
+                            (param.type && param.type.toLowerCase().includes(term)) ||
+                            (param.description && param.description.toLowerCase().includes(term))));
                     }
                 } else if (mode === 'returns') {
                     // Search in return type and description from registry data
-                    if (registryData && registryData.files) {
-                        for (let file of registryData.files) {
-                            const func = file.functions.find(f => f.name.toLowerCase() === funcName);
-                            if (func) {
-                                textMatch = (func.returnType && func.returnType.toLowerCase().includes(term)) || 
-                                           (func.returnDescription && func.returnDescription.toLowerCase().includes(term));
-                            }
-                            if (textMatch) break;
-                        }
-                    }
+                    textMatch = !!((itemFunc.returnType && itemFunc.returnType.toLowerCase().includes(term)) ||
+                                   (itemFunc.returnDescription && itemFunc.returnDescription.toLowerCase().includes(term)));
                 }
                 match = match && textMatch;
             }

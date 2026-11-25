@@ -446,56 +446,6 @@ function fetchData($sql, $dbFile, $params = []) {
 }
 
 /**
- * Build SQL LIKE conditions for multi-column search
- * Supports both quoted (phrase) and unquoted (word-by-word) searches
- * 
- * Creates SQL WHERE clause fragments for searching multiple columns.
- * Supports both keyword search (AND logic) and quoted phrase search.
- * 
- * Keyword search: "ABC transporter"
- *   - Splits into terms: ["ABC", "transporter"]
- *   - Logic: (col1 LIKE '%ABC%' OR col2 LIKE '%ABC%') AND (col1 LIKE '%transporter%' OR col2 LIKE '%transporter%')
- *   - Result: Both terms must match somewhere
- * 
- * Quoted search: '"ABC transporter"'
- *   - Keeps as single phrase: "ABC transporter"
- *   - Logic: (col1 LIKE '%ABC transporter%' OR col2 LIKE '%ABC transporter%')
- *   - Result: Exact phrase must match
- * 
- * @param array $columns - Column names to search
- * @param string $search - Search string (unquoted: words separated by space, quoted: single phrase)
- * @param bool $quoted - If true, treat entire $search as single phrase; if false, split on whitespace
- * @return array - [$sqlFragment, $params] for use with fetchData()
- */
-function buildLikeConditions($columns, $search, $quoted = false) {
-    $conditions = [];
-    $params = [];
-
-    if ($quoted) {
-        $searchConditions = [];
-        foreach ($columns as $col) {
-            $searchConditions[] = "$col LIKE ?";
-            $params[] = "%" . $search . "%";
-        }
-        $conditions[] = "(" . implode(" OR ", $searchConditions) . ")";
-    } else {
-        $terms = preg_split('/\s+/', trim($search));
-        foreach ($terms as $term) {
-            if (empty($term)) continue;
-            $termConditions = [];
-            foreach ($columns as $col) {
-                $termConditions[] = "$col LIKE ?";
-                $params[] = "%" . $term . "%";
-            }
-            $conditions[] = "(" . implode(" OR ", $termConditions) . ")";
-        }
-    }
-
-    $sqlFragment = implode(" AND ", $conditions);
-    return [$sqlFragment, $params];
-}
-
-/**
  * Get accessible genome IDs from database for organism
  * 
  * @param string $organism_name - Organism name

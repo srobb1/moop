@@ -148,107 +148,6 @@ class PathResolver
     }
     
     /**
-     * Resolve track path from various formats
-     * 
-     * Handles:
-     * - AUTO: Auto-resolve reference/annotation paths
-     * - Absolute paths: /data/moop/data/tracks/...
-     * - Relative paths: data/tracks/... (prepends site_path)
-     * - HTTP/HTTPS URLs: https://server.com/track.bw
-     * 
-     * @param string $path Track path from Google Sheet
-     * @param string $organism Organism name (required for AUTO)
-     * @param string $assembly Assembly ID (required for AUTO)
-     * @param string $type Track type (required for AUTO)
-     * @return array [resolved_path, is_remote]
-     * @throws InvalidArgumentException If AUTO used without organism/assembly
-     */
-    public function resolveTrackPath($path, $organism = null, $assembly = null, $type = null)
-    {
-        if (empty($path)) {
-            throw new InvalidArgumentException("Track path cannot be empty");
-        }
-        
-        // Handle AUTO keyword (reference genome and annotations)
-        if (strtoupper($path) === 'AUTO') {
-            return $this->resolveAutoPath($organism, $assembly, $type);
-        }
-        
-        // Remote URL - return as-is
-        if ($this->isRemote($path)) {
-            return [$path, true];
-        }
-        
-        // Absolute path - return as-is
-        if ($path[0] === '/') {
-            return [$path, false];
-        }
-        
-        // Relative path - prepend site_path
-        $sitePath = $this->config->getPath('site_path');
-        $absolutePath = $sitePath . '/' . ltrim($path, '/');
-        return [$absolutePath, false];
-    }
-    
-    /**
-     * Resolve AUTO paths for reference genomes and annotations
-     * 
-     * AUTO paths resolve to symlinked files in JBrowse genomes directory.
-     * Source files are in /organisms/{organism}/{assembly}/ and follow patterns
-     * defined in site_config.php (sequence_types['genome']['pattern'] and genes_gff_filename).
-     * 
-     * Resolved paths:
-     *   - fasta: {genomes_directory}/{organism}/{assembly}/reference.fasta
-     *   - gff: {genomes_directory}/{organism}/{assembly}/annotations.gff3.gz
-     * 
-     * @param string $organism Organism name
-     * @param string $assembly Assembly ID
-     * @param string $type Track type (fasta or gff)
-     * @return array [resolved_path, is_remote]
-     * @throws InvalidArgumentException If organism/assembly/type missing
-     * @throws RuntimeException If config missing
-     */
-    private function resolveAutoPath($organism, $assembly, $type)
-    {
-        if (empty($organism) || empty($assembly)) {
-            throw new InvalidArgumentException(
-                "AUTO paths require --organism and --assembly parameters"
-            );
-        }
-        
-        // Get genomes directory from config (required)
-        $jbrowse2Config = $this->config->get('jbrowse2');
-        if (empty($jbrowse2Config['genomes_directory'])) {
-            throw new RuntimeException(
-                "Configuration error: jbrowse2.genomes_directory not defined in site_config.php"
-            );
-        }
-        
-        $genomesDir = rtrim($jbrowse2Config['genomes_directory'], '/');
-        
-        switch ($type) {
-            case 'fasta':
-                // Symlinked from /organisms/{organism}/{assembly}/{genome_pattern}
-                // to {genomes_directory}/{organism}/{assembly}/reference.fasta
-                $path = "$genomesDir/$organism/$assembly/reference.fasta";
-                break;
-                
-            case 'gff':
-                // Compressed from /organisms/{organism}/{assembly}/{annotation_pattern}
-                // to {genomes_directory}/{organism}/{assembly}/annotations.gff3.gz
-                $path = "$genomesDir/$organism/$assembly/annotations.gff3.gz";
-                break;
-                
-            default:
-                throw new InvalidArgumentException(
-                    "AUTO only supported for fasta and gff track types, not '$type'"
-                );
-        }
-        
-        return [$path, false];
-    }
-    
-    /**
      * Check if path is a remote URL
      * 
      * @param string $path Path to check
@@ -257,26 +156,6 @@ class PathResolver
     public function isRemote($path)
     {
         return preg_match('#^https?://#i', $path) === 1;
-    }
-    
-    /**
-     * Check if tracks server is enabled
-     * 
-     * @return bool
-     */
-    public function isTracksServerEnabled()
-    {
-        return !empty($this->tracksServerConfig['enabled']);
-    }
-    
-    /**
-     * Get tracks server URL
-     * 
-     * @return string|null
-     */
-    public function getTracksServerUrl()
-    {
-        return $this->tracksServerConfig['url'] ?? null;
     }
     
     /**
@@ -293,57 +172,6 @@ class PathResolver
         }
         
         return file_exists($path);
-    }
-    
-    /**
-     * Get track directory for organism/assembly
-     * 
-     * Creates directory if it doesn't exist.
-     * 
-     * @param string $organism Organism name
-     * @param string $assembly Assembly ID
-     * @param string $trackType Track type (bigwig, bam, etc.)
-     * @return string Absolute filesystem path
-     * @throws RuntimeException If config missing or directory cannot be created
-     */
-    public function getTrackDirectory($organism, $assembly, $trackType)
-    {
-        $jbrowse2Config = $this->config->get('jbrowse2');
-        if (empty($jbrowse2Config['tracks_directory'])) {
-            throw new RuntimeException(
-                "Configuration error: jbrowse2.tracks_directory not defined in site_config.php"
-            );
-        }
-        
-        $tracksDir = rtrim($jbrowse2Config['tracks_directory'], '/');
-        $fullPath = "$tracksDir/$organism/$assembly/$trackType";
-        
-        // Ensure directory exists
-        $this->ensureDirectoryExists($fullPath);
-        
-        return $fullPath;
-    }
-    
-    /**
-     * Get metadata directory for organism/assembly
-     * 
-     * Creates directory if it doesn't exist.
-     * 
-     * @param string $organism Organism name
-     * @param string $assembly Assembly ID
-     * @param string $trackType Track type (bigwig, bam, combo, etc.)
-     * @return string Absolute filesystem path
-     * @throws RuntimeException If directory cannot be created
-     */
-    public function getMetadataDirectory($organism, $assembly, $trackType)
-    {
-        $metadataDir = $this->config->getPath('metadata_path');
-        $fullPath = "$metadataDir/jbrowse2-configs/tracks/$organism/$assembly/$trackType";
-        
-        // Ensure directory exists
-        $this->ensureDirectoryExists($fullPath);
-        
-        return $fullPath;
     }
     
     /**

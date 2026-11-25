@@ -45,14 +45,6 @@ class MCScanTrack extends BaseTrack implements TrackTypeInterface
     }
     
     /**
-     * Get expected index file extension(s)
-     */
-    public function getIndexExtensions()
-    {
-        return ['.bed']; // BED files for gene positions
-    }
-    
-    /**
      * Get required fields
      */
     public function getRequiredFields()

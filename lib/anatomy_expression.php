@@ -407,29 +407,6 @@ function moop_page_find_publications(string $organism, string $q, int $limit = 1
 }
 
 /**
- * Search by gene or transcript ID: any ids (h1 gene, SMED3, dd_v6, EST, array probe, symbol...)
- * -> through the crosswalk to their reference genes -> every accession mapped to those genes ->
- * their curations. So any id of a gene finds the records made under any other id of it.
- * Returns ['rows' => curations, 'matched' => [input => [ref ids]], 'unknown' => [inputs]].
- */
-function moop_page_search_ids(string $organism, array $ids, int $limit = 5000): array {
-    require_once __DIR__ . '/crosswalk.php';
-    $ids  = array_values(array_unique(array_filter(array_map('trim', $ids), 'strlen')));
-    $refs = moop_crosswalk_genes($organism, $ids);
-    $matched = []; $all_refs = [];
-    foreach ($ids as $in) {
-        $r = array_values(array_unique(array_column($refs[mb_strtolower($in)] ?? [], 'ref_id')));
-        if ($r) { $matched[$in] = $r; $all_refs = array_merge($all_refs, $r); }
-    }
-    $members = moop_crosswalk_members($organism, array_merge($ids, $all_refs));
-    $rows    = moop_page_for_accessions($organism, array_merge($ids, $all_refs, array_column($members, 'accession')), $limit);
-    // An id the crosswalk does not know may still have curations under exactly that id.
-    $direct  = array_flip(array_map('mb_strtolower', array_column($rows, 'accession')));
-    $unknown = array_values(array_filter($ids, fn($i) => !isset($matched[$i]) && !isset($direct[mb_strtolower($i)])));
-    return ['rows' => $rows, 'matched' => $matched, 'unknown' => $unknown];
-}
-
-/**
  * Anatomy terms for MANY genes at once (the Data Exporter's "Anatomical expression" column).
  * $genes: [key => [ids of that gene: gene id, transcript ids, ...]]. Each gene's ids reach their
  * reference genes through the crosswalk, then every accession mapped to those genes, then the

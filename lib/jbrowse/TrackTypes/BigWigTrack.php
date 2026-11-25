@@ -278,13 +278,4 @@ class BigWigTrack extends BaseTrack implements TrackTypeInterface
         return false;
     }
     
-    /**
-     * Get expected index file extensions
-     * 
-     * @return array Empty array - BigWig files don't need separate index
-     */
-    public function getIndexExtensions()
-    {
-        return [];
-    }
 }

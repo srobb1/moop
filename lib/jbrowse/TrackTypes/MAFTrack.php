@@ -46,14 +46,6 @@ class MAFTrack extends BaseTrack implements TrackTypeInterface
     }
     
     /**
-     * Get expected index file extension(s)
-     */
-    public function getIndexExtensions()
-    {
-        return ['.tbi', '.csi', '.tai']; // Tabix index (.tbi/.csi) or TAF index (.tai)
-    }
-    
-    /**
      * Get required fields
      */
     public function getRequiredFields()

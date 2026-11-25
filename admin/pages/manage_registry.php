@@ -129,6 +129,8 @@
                         <option value="file-io">File I/O</option>
                         <option value="recursive">Recursive</option>
                         <option value="loops">Contains Loops</option>
+                        <option value="security-related">Security-related</option>
+                        <option value="helper">Helper</option>
                     </select>
                 </div>
             </div>

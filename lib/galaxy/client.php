@@ -23,33 +23,6 @@ class GalaxyClient {
     }
     
     /**
-     * Test API connection
-     * @return array ['success' => bool, 'email' => string, 'message' => string]
-     */
-    public function testConnection() {
-        try {
-            $response = $this->get('/api/users/current');
-            
-            if ($response && isset($response['quota_percent'])) {
-                return [
-                    'success' => true,
-                    'message' => 'Connected to Galaxy'
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'message' => 'Invalid response from Galaxy'
-                ];
-            }
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'message' => $e->getMessage()
-            ];
-        }
-    }
-    
-    /**
      * Create a new history for analysis
      * @param int $userId MOOP user ID
      * @param string $toolName Name of the tool being used
@@ -272,34 +245,6 @@ class GalaxyClient {
             'file_size' => $response['file_size'] ?? 0,
             'created' => $response['create_time'] ?? null
         ];
-    }
-    
-    /**
-     * List histories
-     * @return array List of histories
-     */
-    public function listHistories($limit = 10) {
-        $response = $this->get('/api/histories?limit=' . $limit);
-        
-        if (!is_array($response)) {
-            return [];
-        }
-        
-        return $response;
-    }
-    
-    /**
-     * Delete history (cleanup)
-     * @param string $historyId History ID
-     * @return bool Success
-     */
-    public function deleteHistory($historyId) {
-        try {
-            $response = $this->delete('/api/histories/' . urlencode($historyId));
-            return true;
-        } catch (Exception $e) {
-            return false;
-        }
     }
     
     // ============================================================

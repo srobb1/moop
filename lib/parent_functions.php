@@ -207,22 +207,6 @@ function getAncestors($feature_uniquename, $dbFile, $gene_set_ids = []) {
 }
 
 /**
- * getAncestorsByFeatureId — kept for backwards compatibility.
- * Delegates to getAncestors() via a uniquename lookup.
- */
-function getAncestorsByFeatureId($feature_id, $dbFile, $gene_set_ids = []) {
-    $rows = fetchData(
-        "SELECT feature_uniquename FROM feature WHERE feature_id = ?",
-        $dbFile,
-        [$feature_id]
-    );
-    if (empty($rows)) return [];
-    $chain = getAncestors($rows[0]['feature_uniquename'], $dbFile, $gene_set_ids);
-    // Original callers expect the chain WITHOUT the seed feature itself
-    return array_slice($chain, 1);
-}
-
-/**
  * Get all children and descendants of a feature
  * Recursively fetches all child features at any depth
  * Optionally filters by genome_ids for permission-based access

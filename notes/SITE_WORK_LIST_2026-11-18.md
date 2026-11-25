@@ -611,3 +611,11 @@ Planosphere
       annotation block (noggin-1: 4 mRNAs x ~215 annotations; Pathways, GO, domains shown once per isoform). Most
       isoforms carry the same annotations; scores may differ. Idea to discuss: one gene-level table, with a column
       or marker for which isoforms carry each row (and differing scores), instead of one block per isoform. **discussion**
+- [ ] **Function review: are we duplicating functions? (Sofia 11-25).** Early on the same job was often written
+      twice under different names. The registry only catches the SAME name in two files; it cannot see two
+      differently-named functions doing one job. Plan: group the ~1,560 PHP + ~590 JS functions by what they do
+      (category, parameters, the tables/files they touch, similar bodies), list likely look-alikes, then read
+      each pair and keep one. Known leads: toolExists() in setup.php AND setup-check.php; three fail() helpers
+      (scripts/reset_password.php, scripts/spatial_atlas_from_endoatlas.php, setup-check.php); escapeHtml-style
+      helpers in many JS files (36 JS names are defined in more than one file). Dead code was cleared 11-25
+      (65 functions + js/modules/manage-registry.js), so what is left is all in use. **M-L**

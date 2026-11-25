@@ -218,56 +218,6 @@ function getGeneSetInfo($assembly, $gene_set, $db_path) {
 }
 
 /**
- * Resolve source selection from organism, assembly, and gene_set parameters
- * Handles both genome_name and genome_accession formats
- * Returns the correct selected_source string for pre-selecting radio buttons
- *
- * @param string $organism Organism name
- * @param string $assembly Assembly (could be genome_name or genome_accession)
- * @param array $accessible_sources Flattened list of sources with genome_id, genome_name, gene_set, etc.
- * @param string|null $gene_set Optional gene_set name to match against
- * @return string Selected source in format "organism|assembly_dir|gene_set" or empty string if not found
- */
-function resolveSourceSelection($organism, $assembly, $accessible_sources, $gene_set = null) {
-    // Try direct matches first: assembly dir, genome_name, or genome_id
-    foreach ($accessible_sources as $source) {
-        if ($source['organism'] === $organism) {
-            $assembly_match = ($source['assembly'] === $assembly ||
-                               $source['genome_name'] === $assembly ||
-                               $source['genome_id'] === $assembly);
-            $gene_set_match = ($gene_set === null || ($source['gene_set'] ?? '') === $gene_set);
-            if ($assembly_match && $gene_set_match) {
-                return $organism . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
-            }
-        }
-    }
-
-    // If not found by direct match, try via database lookup
-    $config = ConfigManager::getInstance();
-    $organism_data = $config->getPath('organism_data');
-
-    try {
-        $db_path = "$organism_data/$organism/organism.sqlite";
-        [$genome_id_param, $genome_name_param, $genome_accession_param] = getAssemblyInfo($assembly, $db_path);
-
-        if (!empty($genome_name_param)) {
-            foreach ($accessible_sources as $source) {
-                $gene_set_match = ($gene_set === null || ($source['gene_set'] ?? '') === $gene_set);
-                if ($source['organism'] === $organism &&
-                    $source['genome_name'] === $genome_name_param &&
-                    $gene_set_match) {
-                    return $organism . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
-                }
-            }
-        }
-    } catch (Exception $e) {
-        // If lookup fails, return empty
-    }
-
-    return '';
-}
-
-/**
  * Get gene_sets accessible to current user
  * Filters gene_sets based on user access level and group membership
  *

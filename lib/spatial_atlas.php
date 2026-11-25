@@ -32,17 +32,6 @@ function moop_atlas_file(string $organism, string $assembly, string $gene_set, s
     return moop_atlas_dir($organism, $assembly, $gene_set) . '/' . preg_replace('/[^a-z0-9_-]/', '', $name) . '.sqlite';
 }
 
-/** Atlas names built for a gene set (file names without .sqlite), sorted. */
-function moop_atlas_names(string $organism, string $assembly, string $gene_set): array {
-    $out = [];
-    foreach (glob(moop_atlas_dir($organism, $assembly, $gene_set) . '/*.sqlite') ?: [] as $f) {
-        $n = basename($f, '.sqlite');
-        if (preg_match('/^[a-z0-9_-]+$/', $n)) $out[] = $n;
-    }
-    sort($out);
-    return $out;
-}
-
 /** Access key (lib/access_rules.php kind 'atlas'): atlas:<organism>/<assembly>/<gene set>/<name>. */
 function moop_atlas_analysis_key(string $organism, string $assembly, string $gene_set, string $name): string {
     return "atlas:$organism/$assembly/$gene_set/$name";

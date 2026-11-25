@@ -319,21 +319,6 @@ class ConfigManager
     }
 
     /**
-     * Get specific tool configuration
-     * 
-     * @param string $tool_id Tool identifier
-     * @return array|null Tool configuration or null if not found
-     */
-    public function getTool($tool_id)
-    {
-        if (!$this->ensureLoaded()) {
-            return null;
-        }
-
-        return $this->tools[$tool_id] ?? null;
-    }
-
-    /**
      * Get all available tools
      * 
      * @return array Array of all tool configurations
@@ -728,88 +713,6 @@ class ConfigManager
     }
 
     /**
-     * Build tool URL with context parameters
-     * 
-     * @param string $tool_id Tool identifier
-     * @param array $context Context array with organism, assembly, group, display_name
-     * @return string|null Built URL or null if tool not found
-     */
-    public function buildToolUrl($tool_id, $context = [])
-    {
-        $tool = $this->getTool($tool_id);
-        if (!$tool) {
-            return null;
-        }
-
-        $site = $this->getString('site', 'moop');
-        $url = moop_url_base() . $tool['url_path'];
-        $params = [];
-
-        // Build query parameters from context
-        if (isset($tool['context_params']) && is_array($tool['context_params'])) {
-            foreach ($tool['context_params'] as $param) {
-                if (!empty($context[$param])) {
-                    $params[$param] = $context[$param];
-                }
-            }
-        }
-
-        if (!empty($params)) {
-            $url .= '?' . http_build_query($params);
-        }
-
-        return $url;
-    }
-
-    /**
-     * Check if a tool should be visible on a specific page
-     * 
-     * @param string $tool_id Tool identifier
-     * @param string $page Page identifier (index, organism, group, assembly, parent, multi_organism_search)
-     * @return bool True if tool should be visible on this page
-     */
-    public function isToolVisibleOnPage($tool_id, $page)
-    {
-        $tool = $this->getTool($tool_id);
-        if (!$tool) {
-            return false;
-        }
-
-        // If 'pages' key not defined, default to 'all'
-        $pages = $tool['pages'] ?? 'all';
-
-        // 'all' means show on all pages
-        if ($pages === 'all') {
-            return true;
-        }
-
-        // If pages is an array, check if current page is in it
-        if (is_array($pages)) {
-            return in_array($page, $pages);
-        }
-
-        // If pages is a string (and not 'all'), treat as single page name
-        return $page === $pages;
-    }
-
-    /**
-     * Add or register a tool at runtime
-     * 
-     * @param string $tool_id Tool identifier
-     * @param array $config Tool configuration
-     * @return bool True if added successfully
-     */
-    public function addTool($tool_id, $config)
-    {
-        if (!is_array($config) || empty($config['id'])) {
-            return false;
-        }
-
-        $this->tools[$tool_id] = $config;
-        return true;
-    }
-
-    /**
      * Validate that all required configuration keys exist
      * 
      * @return bool True if all required configs are present
@@ -829,16 +732,6 @@ class ConfigManager
         }
 
         return empty($this->errors);
-    }
-
-    /**
-     * Get list of required configuration keys
-     * 
-     * @return array List of required keys
-     */
-    public function getRequiredKeys()
-    {
-        return $this->requiredKeys;
     }
 
     /**
@@ -863,16 +756,6 @@ class ConfigManager
     }
 
     /**
-     * Get all validation errors
-     * 
-     * @return array List of error messages
-     */
-    public function getErrors()
-    {
-        return $this->errors;
-    }
-
-    /**
      * Reload configuration from files
      * Force fresh load from disk
      * 
@@ -888,37 +771,6 @@ class ConfigManager
         $this->errors = [];
 
         return $this->initialize($site_config_path, $tools_config_path);
-    }
-
-    /**
-     * Get all loaded configuration (for debugging)
-     * 
-     * @param bool $include_tools Include tool registry in output
-     * @return array All loaded configuration
-     */
-    public function getAllConfig($include_tools = true)
-    {
-        $result = [
-            'loaded' => $this->loaded,
-            'config' => $this->config,
-            'errors' => $this->errors,
-        ];
-
-        if ($include_tools) {
-            $result['tools'] = $this->tools;
-        }
-
-        return $result;
-    }
-
-    /**
-     * Check if configuration is loaded
-     * 
-     * @return bool True if loaded
-     */
-    public function isLoaded()
-    {
-        return $this->loaded;
     }
 
     /**

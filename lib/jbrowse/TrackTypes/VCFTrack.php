@@ -136,14 +136,6 @@ class VCFTrack extends BaseTrack implements TrackTypeInterface
     }
     
     /**
-     * Get index extensions
-     */
-    public function getIndexExtensions()
-    {
-        return ['.tbi'];
-    }
-    
-    /**
      * Find TBI index file
      */
     private function findTbiIndex(string $vcfPath): ?string

@@ -25,7 +25,7 @@
     <p class="text-muted mb-2"><?= t('Counting annotations across all organisms... This may take a few seconds.') ?></p>
     <p class="text-muted small mb-0">
       <strong>Note:</strong> If this takes too long or times out, use the <strong>Update Cache</strong> button on the
-      <a href="admin/manage_organisms.php">Manage Organisms</a> or <a href="admin/admin.php">Admin Dashboard</a> page,
+      <a href="<?= moop_url('admin/manage_organisms.php') ?>">Manage Organisms</a> or <a href="<?= moop_url('admin/admin.php') ?>">Admin Dashboard</a> page,
       or run from the command line: <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">php scripts/warm_organism_cache.php</code>
     </p>
   </div>

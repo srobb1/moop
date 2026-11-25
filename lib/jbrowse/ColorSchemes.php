@@ -122,14 +122,6 @@ class ColorSchemes
     ];
     
     /**
-     * Get all color schemes
-     */
-    public static function getSchemes()
-    {
-        return self::$schemes;
-    }
-    
-    /**
      * Get a specific color scheme
      * 
      * Supports special formats:
@@ -161,14 +153,6 @@ class ColorSchemes
         
         // Regular scheme name
         return self::$schemes[$name] ?? null;
-    }
-    
-    /**
-     * Get color scheme info
-     */
-    public static function getInfo($name)
-    {
-        return self::$info[$name] ?? ['type' => 'unknown', 'best_for' => 'general use'];
     }
     
     /**

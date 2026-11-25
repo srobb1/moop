@@ -35,11 +35,6 @@ class PIFTrack extends BaseTrack implements TrackTypeInterface
         return true;
     }
     
-    public function getIndexExtensions()
-    {
-        return ['.tbi'];
-    }
-    
     public function getRequiredFields()
     {
         return ['track_id', 'name', 'track_path', 'assembly1', 'assembly2'];

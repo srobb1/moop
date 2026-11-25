@@ -33,52 +33,6 @@ function sanitize_search_input($input, $quoted_search = false) {
 }
 
 /**
- * Validate a search term for safety and usability
- * 
- * Checks that a search term meets minimum requirements and doesn't contain
- * problematic patterns that could cause issues with database queries or
- * return meaningless results.
- * 
- * @param string $term - Search term to validate
- * @return array - Validation result with 'valid' boolean and 'error' message
- */
-function validate_search_term($term) {
-    $term = sanitize_search_input($term);
-    
-    if (empty($term)) {
-        return ['valid' => false, 'error' => 'Search term cannot be empty'];
-    }
-    
-    if (strlen($term) < 2) {
-        return ['valid' => false, 'error' => 'Search term must be at least 2 characters long'];
-    }
-    
-    if (strlen($term) > 100) {
-        return ['valid' => false, 'error' => 'Search term too long (maximum 100 characters)'];
-    }
-    
-    // Check for patterns that might cause performance issues
-    if (preg_match('/^[%_*]+$/', $term)) {
-        return ['valid' => false, 'error' => 'Search term cannot consist only of wildcards'];
-    }
-    
-    return ['valid' => true, 'term' => $term];
-}
-
-/**
- * Check if a search term is quoted (surrounded by quotes)
- * 
- * @param string $term - Search term to check
- * @return bool - True if term is quoted, false otherwise
- */
-function is_quoted_search($term) {
-    $term = trim($term);
-    return (strlen($term) >= 2 && 
-            (($term[0] === '"' && $term[-1] === '"') ||
-             ($term[0] === "'" && $term[-1] === "'")));
-}
-
-/**
  * Validate and extract organism parameter from GET/POST
  * Redirects to home if missing/empty
  * 
@@ -98,25 +52,6 @@ function validateOrganismParam($organism_name, $redirect_on_empty = null) {
     return $organism_name;
 }
 
-/**
- * Validate and extract assembly parameter from GET/POST
- * Redirects to home if missing/empty
- *
- * @param string $assembly Assembly accession to validate
- * @param string|null $redirect_on_empty URL to redirect to if empty (default: /{site}/index.php)
- * @return string Validated assembly name
- */
-function validateAssemblyParam($assembly, $redirect_on_empty = null) {
-    if (empty($assembly)) {
-        if ($redirect_on_empty === null) {
-            $site = ConfigManager::getInstance()->getString('site');
-            $redirect_on_empty = moop_url_base() . "/index.php";
-        }
-        header("Location: $redirect_on_empty");
-        exit;
-    }
-    return $assembly;
-}
 /**
  * Decode URL-encoded annotation/description text for display
  * Converts %3D back to =, %3B back to ;, etc.

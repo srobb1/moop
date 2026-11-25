@@ -79,13 +79,5 @@ interface TrackTypeInterface
      * @return bool True if index files required (BAM, VCF, CRAM)
      */
     public function requiresIndex();
-    
-    /**
-     * Get expected index file extension(s)
-     * 
-     * Returns empty array if no index required.
-     * 
-     * @return array Index extensions (e.g., ['.bai'] for BAM, ['.tbi'] for VCF)
-     */
-    public function getIndexExtensions();
+
 }

@@ -45,14 +45,6 @@ class PAFTrack extends BaseTrack implements TrackTypeInterface
     }
     
     /**
-     * Get expected index file extension(s)
-     */
-    public function getIndexExtensions()
-    {
-        return []; // No index files
-    }
-    
-    /**
      * Get required fields
      */
     public function getRequiredFields()

@@ -369,38 +369,4 @@ if ($page_lang !== 'en'): require_once __DIR__ . '/../lib/i18n.php'; ?>
     return ob_get_clean();
 }
 
-/**
- * Render a response as JSON (for AJAX requests)
- * 
- * This function:
- * 1. Sets appropriate HTTP headers
- * 2. Encodes data as JSON
- * 3. Outputs and exits
- * 
- * Used when display pages need to return data instead of HTML
- * (e.g., search results, validation responses)
- * 
- * @param array $data Data to return as JSON
- * @param int $status HTTP status code (200, 400, 404, 500, etc.)
- * @return void (outputs JSON and exits script)
- * 
- * @example
- *   render_json_response([
- *       'success' => true,
- *       'message' => 'Search completed',
- *       'results' => $search_results
- *   ]);
- * 
- *   render_json_response([
- *       'success' => false,
- *       'error' => 'Invalid organism'
- *   ], 404);
- */
-function render_json_response($data, $status = 200) {
-    http_response_code($status);
-    header('Content-Type: application/json');
-    echo json_encode($data);
-    exit;
-}
-
 ?>

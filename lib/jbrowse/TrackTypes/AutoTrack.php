@@ -386,11 +386,4 @@ class AutoTrack implements TrackTypeInterface
         return false; // AUTO handles indexes internally
     }
     
-    /**
-     * Get index extensions
-     */
-    public function getIndexExtensions()
-    {
-        return [];
-    }
 }

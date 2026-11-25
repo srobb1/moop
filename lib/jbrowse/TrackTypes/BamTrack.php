@@ -135,14 +135,6 @@ class BamTrack extends BaseTrack implements TrackTypeInterface
     }
     
     /**
-     * Get index extensions
-     */
-    public function getIndexExtensions()
-    {
-        return ['.bai'];
-    }
-    
-    /**
      * Find BAI index file
      */
     private function findBaiIndex(string $bamPath): ?string

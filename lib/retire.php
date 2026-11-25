@@ -48,15 +48,6 @@ function moop_retire_rel(array $t): string {
     return implode('/', array_filter([$t['organism'] ?? '', $t['assembly'] ?? '', $t['gene_set'] ?? ''], 'strlen'));
 }
 
-/** How a target reads in messages: "Danio_rerio", "assembly GCA_1 of Danio_rerio", … */
-function moop_retire_label(array $t): string {
-    switch ($t['level']) {
-        case 'assembly': return "assembly {$t['assembly']}";
-        case 'gene_set': return "gene set {$t['gene_set']} ({$t['assembly']})";
-        default:         return $t['organism'];
-    }
-}
-
 /** Assembly directories of an organism: directories only, never hidden. */
 function moop_retire_assembly_dirs(string $org_dir): array {
     return moop_organism_dirs($org_dir);   // same rule, one level down

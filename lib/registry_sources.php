@@ -45,10 +45,10 @@ function moop_registry_source_files(string $type, ?string $base = null): array
         return array_values($files);
     }
 
-    // Mirrors tools/generate_registry_json.php: these five directories RECURSIVELY, plus the
+    // Mirrors tools/generate_registry_json.php: these six directories RECURSIVELY, plus the
     // top-level scripts. Recursive matters — an earlier glob-based version silently skipped
     // lib/jbrowse/, admin/api/ and admin/pages/.
-    $scan_dirs = ["$base/lib", "$base/tools", "$base/admin", "$base/includes", "$base/api"];
+    $scan_dirs = ["$base/lib", "$base/tools", "$base/admin", "$base/includes", "$base/api", "$base/scripts"];
     $files     = glob("$base/*.php") ?: [];
 
     foreach ($scan_dirs as $dir) {
@@ -77,6 +77,17 @@ function moop_registry_source_files(string $type, ?string $base = null): array
     $files = array_values(array_unique($files));
     sort($files);
     return $files;
+}
+
+/**
+ * A path relative to the site root (as the registries store them). Resolves symlinks and
+ * "tools/../" first: stripping the unresolved `__DIR__ . '/../'` string never matched a
+ * realpath()'d file, which left every usage path in the PHP registry absolute.
+ */
+function moop_registry_relpath(string $path): string {
+    $base = realpath(dirname(__DIR__)) . '/';
+    $real = realpath($path) ?: $path;
+    return strpos($real, $base) === 0 ? substr($real, strlen($base)) : $real;
 }
 
 /**

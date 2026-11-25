@@ -168,11 +168,6 @@ function moop_crosswalk_check(string $organism): string {
     return $seen[$organism] = '';
 }
 
-function moop_crosswalk_meta(string $organism): array {
-    $db = moop_crosswalk_connect($organism);
-    return $db ? $db->query('SELECT key, value FROM meta')->fetchAll(PDO::FETCH_KEY_PAIR) : [];
-}
-
 /**
  * Build from local mapping files: $hubs = [hub => path]. Returns ['ok', 'error', 'counts', 'skipped'].
  */

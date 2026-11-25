@@ -128,16 +128,6 @@ class TrackGenerator
     }
     
     /**
-     * Get list of registered track types
-     * 
-     * @return array List of track type identifiers
-     */
-    public function getRegisteredTrackTypes()
-    {
-        return array_keys($this->trackTypes);
-    }
-    
-    /**
      * Determine track type from file extension
      * 
      * @param string $path File path
@@ -607,24 +597,6 @@ class TrackGenerator
     }
     
     /**
-     * Regenerate specific tracks
-     * 
-     * @param array $trackIds Track IDs to regenerate
-     * @param string $organism Organism name
-     * @param string $assembly Assembly ID
-     * @return array Results
-     */
-    public function regenerateTracks($trackIds, $organism, $assembly)
-    {
-        // TODO: Implement track regeneration
-        // This requires loading existing track metadata and regenerating
-        return [
-            'success' => [],
-            'failed' => []
-        ];
-    }
-    
-    /**
      * Did this track JSON come from a Google Sheet?
      *
      * Only sheet-origin tracks may be removed by a sheet sync. The gene annotation track
@@ -701,33 +673,4 @@ class TrackGenerator
         return $removed;
     }
     
-    /**
-     * Validate track data
-     * 
-     * @param array $trackData Track data to validate
-     * @return array ['valid' => bool, 'errors' => array]
-     */
-    public function validateTrack($trackData)
-    {
-        // Determine track type
-        $trackType = $this->determineTrackType($trackData['TRACK_PATH']);
-        
-        if (!$trackType) {
-            return [
-                'valid' => false,
-                'errors' => ['Unknown track type for: ' . $trackData['TRACK_PATH']]
-            ];
-        }
-        
-        // Get handler and validate
-        $handler = $this->getTrackTypeHandler($trackType);
-        if (!$handler) {
-            return [
-                'valid' => false,
-                'errors' => ['No handler for track type: ' . $trackType]
-            ];
-        }
-        
-        return $handler->validate($trackData);
-    }
 }

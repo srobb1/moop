@@ -417,105 +417,6 @@ class GoogleSheetsParser
     }
     
     /**
-     * Extract regular tracks from parsed data
-     * 
-     * Regular tracks have a TRACK_PATH and are not part of a combo track.
-     * 
-     * @param array $parsed Parsed TSV data
-     * @return array Regular tracks
-     */
-    public function extractRegularTracks($parsed)
-    {
-        $tracks = [];
-        
-        foreach ($parsed as $row) {
-            // Skip if missing required fields
-            if (empty($row['track_id']) || empty($row['name'])) {
-                continue;
-            }
-            
-            // Skip if no TRACK_PATH (might be combo track definition)
-            if (empty($row['track_path'])) {
-                continue;
-            }
-            
-            // Skip if TRACK_PATH is "AUTO" but this is a combo track row
-            if (strtoupper($row['track_path']) === 'AUTO' && !empty($row['combo_track_id'])) {
-                continue;
-            }
-            
-            // Clean up the row
-            $track = $this->cleanTrackData($row);
-            
-            $tracks[] = $track;
-        }
-        
-        return $tracks;
-    }
-    
-    /**
-     * Extract combo tracks from parsed data
-     * 
-     * Combo tracks are defined by COMBO_TRACK_ID and reference multiple files.
-     * 
-     * @param array $parsed Parsed TSV data
-     * @return array Combo tracks
-     */
-    public function extractComboTracks($parsed)
-    {
-        $comboTracks = [];
-        
-        // Group rows by COMBO_TRACK_ID
-        $comboGroups = [];
-        foreach ($parsed as $row) {
-            if (!empty($row['combo_track_id'])) {
-                $comboId = $row['combo_track_id'];
-                if (!isset($comboGroups[$comboId])) {
-                    $comboGroups[$comboId] = [];
-                }
-                $comboGroups[$comboId][] = $row;
-            }
-        }
-        
-        // Process each combo track
-        foreach ($comboGroups as $comboId => $rows) {
-            // Use first row for track metadata
-            $firstRow = $rows[0];
-            
-            // Map ACCESS column to access_level
-            $accessLevel = trim($firstRow['access'] ?? $firstRow['access_level'] ?? '');   // blank = not set (admins only), never PUBLIC
-            
-            $comboTrack = [
-                'track_id' => $comboId,
-                'name' => $firstRow['combo_name'] ?? $comboId,
-                'category' => $firstRow['category'] ?? 'Combo',
-                'access_level' => $accessLevel,
-                'organism' => $firstRow['organism'],
-                'assembly' => $firstRow['assembly'],
-                'files' => [],
-                'names' => [],
-                'colors' => []
-            ];
-            
-            // Extract file paths, names, and colors
-            foreach ($rows as $row) {
-                if (!empty($row['track_path'])) {
-                    $comboTrack['files'][] = $row['track_path'];
-                    $comboTrack['names'][] = $row['name'] ?? basename($row['track_path']);
-                    $comboTrack['colors'][] = $row['color'] ?? '';
-                }
-            }
-            
-            // Only add if we have files
-            if (!empty($comboTrack['files'])) {
-                $comboTracks[] = $comboTrack;
-            }
-        }
-        
-        return $comboTracks;
-    }
-    
-    /**
      * Clean and normalize track data
      * 
      * @param array $row Raw row data
@@ -620,21 +521,6 @@ class GoogleSheetsParser
         return [
             'valid' => empty($missing),
             'missing' => $missing
-        ];
-    }
-    
-    /**
-     * Get statistics about parsed tracks
-     * 
-     * @param array $tracks Tracks array from parseTracks()
-     * @return array Statistics
-     */
-    public function getStatistics($tracks)
-    {
-        return [
-            'regular_tracks' => count($tracks['regular']),
-            'combo_tracks' => count($tracks['combo']),
-            'total' => count($tracks['regular']) + count($tracks['combo'])
         ];
     }
     

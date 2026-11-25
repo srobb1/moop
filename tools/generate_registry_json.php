@@ -8,8 +8,10 @@
  * Usage: php tools/generate_registry_json.php
  * Output: docs/function_registry.json
  */
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }
 
 require_once __DIR__ . '/../includes/config_init.php';
+require_once __DIR__ . '/../lib/registry_sources.php';   // moop_registry_relpath()
 $config = ConfigManager::getInstance();
 $docs_path = $config->getPath('docs_path');
 
@@ -49,8 +51,19 @@ $scanDirs = [
     // unscanned, so a function used only by an endpoint was listed as UNUSED — an invitation
     // to delete something live. Keep in step with lib/registry_sources.php.
     __DIR__ . '/../api',
+    // scripts/ added 2026-11-25: functions only the command-line scripts call (the JBrowse
+    // track-sheet loader, the build_* scripts) were listed UNUSED -- deleting them would have
+    // broken those scripts silently.
+    __DIR__ . '/../scripts',
 ];
+// Searched for USES only (their own functions are not documented): the tests, and the
+// config files that name functions as strings ('available_if' => 'moop_crosswalk_available').
+$usageOnlyFiles = array_merge(
+    moop_registry_php_files([__DIR__ . '/../tests'], []),
+    glob(__DIR__ . '/../config/*.php') ?: []
+);
 $rootPhpFiles = glob(__DIR__ . '/../*.php') ?: [];
+
 
 /**
  * Every PHP file the registry considers: $scanDirs recursively, plus the top-level
@@ -157,19 +170,25 @@ function determineTags($comment, $code, $funcName) {
     $tags = [];
     
     // Check if function modifies data
-    if (preg_match('/file_put_contents|fwrite|INSERT|UPDATE|DELETE|unlink|rename|mkdir|chmod/i', $code)) {
+    // SQL verbs are matched case-SENSITIVELY as words: the old /i matched "$updated",
+    // "delete_button" etc. Filesystem writes are matched as calls.
+    if (preg_match('/\b(?:INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|REPLACE\s+INTO|CREATE\s+TABLE|DROP\s+TABLE)\b/', $code) ||
+        preg_match('/CURLOPT_CUSTOMREQUEST[^;]*[\'"](?:DELETE|PUT|PATCH)[\'"]/', $code) ||
+        preg_match('/\b(?:file_put_contents|fwrite|fputcsv|unlink|rename|mkdir|rmdir|chmod|chown|chgrp|copy|touch|symlink|move_uploaded_file|tempnam)\s*\(/i', $code)) {
         $tags[] = 'mutation';
     } else {
         $tags[] = 'readonly';
     }
     
     // Check if it handles errors
-    if (preg_match('/try\s*\{|catch|throw|error|exception/i', $code)) {
+    // Real handling only -- bare "error" matched any variable or message containing the word.
+    if (preg_match('/\btry\s*\{|\bcatch\s*\(|\bthrow\b|set_error_handler/i', $code)) {
         $tags[] = 'error-handling';
     }
     
     // Check if it uses database
-    if (preg_match('/\$db|\$pdo|PDO|mysqli|query|fetch|execute/i', $code)) {
+    // Calls, not substrings: "query"/"fetch" used to match $query_string, prefetch, etc.
+    if (preg_match('/\bnew\s+PDO\b|->(?:prepare|query|exec|execute|fetch|fetchAll|fetchColumn)\s*\(|\b(?:fetchData|fetch_one|fetch_all)\w*\s*\(/', $code)) {
         $tags[] = 'database-dependent';
     }
     
@@ -193,8 +212,11 @@ function determineTags($comment, $code, $funcName) {
         $tags[] = 'loops';
     }
     
-    // Check for recursion
-    if (preg_match('/\b' . preg_quote($funcName) . '\s*\(/', $code)) {
+    // Recursion: look in the BODY only. $code begins with "function NAME(", so searching all
+    // of it found the definition itself and tagged all 647 functions "recursive".
+    $bodyStart = strpos($code, '{');
+    $body = $bodyStart === false ? '' : substr($code, $bodyStart);
+    if (preg_match('/(?<![\w$>:])' . preg_quote($funcName, '/') . '\s*\(|(?:\$this->|self::|static::)' . preg_quote($funcName, '/') . '\s*\(/', $body)) {
         $tags[] = 'recursive';
     }
     
@@ -294,15 +316,24 @@ function extractFunctions($filePath, $allFunctionNames = []) {
     $inPhp = false;
     $phpContent = '';
     
+    // Non-PHP parts (HTML, the tags) are replaced by blanks of the SAME length, keeping their
+    // newlines, so an offset in $phpContent is the same offset in the file. They used to be
+    // dropped, and the line number was then guessed from strpos($content, $funcName) -- the
+    // first place the name appeared ANYWHERE (a call, a longer name, a comment): 482 of 647
+    // functions pointed at the wrong line.
+    $blank = function ($t) { return preg_replace('/[^\n]/', ' ', $t); };
     foreach ($parts as $part) {
-        if (strpos($part, $phpTag) !== false) {
+        if ($part === $phpTag) {
             $inPhp = true;
-        } elseif (strpos($part, $closeTag) !== false) {
+            $phpContent .= $blank($part);
+        } elseif ($part === $closeTag) {
             $inPhp = false;
-        } elseif ($inPhp) {
-            $phpContent .= $part;
+            $phpContent .= $blank($part);
+        } else {
+            $phpContent .= $inPhp ? $part : $blank($part);
         }
     }
+    $phpLen = strlen($phpContent);
     
     // Match PHP function definitions.
     //
@@ -320,31 +351,19 @@ function extractFunctions($filePath, $allFunctionNames = []) {
         foreach ($matches[0] as $idx => $match) {
             $funcName = $matches[1][$idx][0];
             $startPos = $match[1];
-            $lineNum = substr_count($content, "\n", 0, strpos($content, $funcName)) + 1;
+            $namePos = $matches[1][$idx][1];
+            $lineNum = substr_count($phpContent, "\n", 0, $namePos) + 1;
+            // A method (inside a class) may share its name with methods of other classes;
+            // only top-level functions can be true duplicates.
+            $isMethod = (bool) preg_match('/^\s*(?:public|private|protected|static|abstract|final)\b/', $match[0])
+                || moop_registry_in_class($phpContent, $startPos);
             
             // Extract comment
             $comment = extractCommentBlock($phpContent, $startPos);
             
             // Extract function code
-            $braceCount = 0;
-            $inFunction = false;
-            $functionCode = '';
-            $chars = str_split($phpContent);
-            
-            for ($i = $startPos; $i < strlen($phpContent); $i++) {
-                $char = $chars[$i];
-                $functionCode .= $char;
-                
-                if ($char === '{') {
-                    $braceCount++;
-                    $inFunction = true;
-                } elseif ($char === '}') {
-                    $braceCount--;
-                    if ($inFunction && $braceCount === 0) {
-                        break;
-                    }
-                }
-            }
+            $end = moop_registry_body_end($phpContent, $startPos);
+            $functionCode = substr($phpContent, $startPos, $end - $startPos);
             
             // Parse PHPDoc for parameters and return type
             $docInfo = parsePhpDoc($comment);
@@ -368,12 +387,62 @@ function extractFunctions($filePath, $allFunctionNames = []) {
                 'returnDescription' => $docInfo['returnDescription'],
                 'internalCalls' => $internalCalls,
                 'category' => $category,
-                'tags' => $tags
+                'tags' => $tags,
+                'isMethod' => $isMethod,
             ];
         }
     }
     
     return $functions;
+}
+
+/**
+ * Offset just past the closing brace of the function starting at $start. Braces inside
+ * strings and comments are skipped: counting them raw ran a body on into the NEXT function
+ * whenever a regex or message held a "{" (it made determineJsTags() look recursive).
+ */
+function moop_registry_body_end(string $code, int $start): int {
+    $len = strlen($code);
+    $depth = 0;
+    $opened = false;
+    for ($i = $start; $i < $len; $i++) {
+        $c = $code[$i];
+        if ($c === "'" || $c === '"') {                       // skip a quoted string
+            for ($i++; $i < $len && $code[$i] !== $c; $i++) {
+                if ($code[$i] === '\\') $i++;
+            }
+            continue;
+        }
+        if ($c === '/' && ($code[$i + 1] ?? '') === '*') {    // skip /* ... */
+            $close = strpos($code, '*/', $i + 2);
+            $i = $close === false ? $len : $close + 1;
+            continue;
+        }
+        if (($c === '/' && ($code[$i + 1] ?? '') === '/') || $c === '#') {   // skip // or # line
+            $nl = strpos($code, "\n", $i);
+            $i = $nl === false ? $len : $nl;
+            continue;
+        }
+        if ($c === '{') { $depth++; $opened = true; }
+        elseif ($c === '}' && --$depth === 0 && $opened) return $i + 1;
+    }
+    return $len;
+}
+
+/**
+ * Is $pos inside a class/trait/interface body? Finds the last class opener before $pos and
+ * checks its braces are still open. (Plain brace depth would also call a function inside an
+ * `if (!function_exists(...)) {` guard a method.) Braces in strings can skew it; good enough
+ * for documentation tooling.
+ */
+function moop_registry_in_class(string $code, int $pos): bool {
+    $head = substr($code, 0, $pos);
+    if (!preg_match_all('/^\s*(?:abstract\s+|final\s+)?(?:class|trait|interface)\s+\w+[^{;]*\{/m', $head, $m, PREG_OFFSET_CAPTURE)) {
+        return false;
+    }
+    $last = end($m[0]);
+    $inside = substr($head, $last[1] + strlen($last[0]));
+    return substr_count($inside, '{') - substr_count($inside, '}') >= 0;
 }
 
 /**
@@ -383,13 +452,19 @@ function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
     global $rootPhpFiles;
     $usages = [];
     $seen = [];
-    $searchPattern = '/\b' . preg_quote($funcName, '/') . '\s*\(/';
+    $q = preg_quote($funcName, '/');
+    // A call, OR the name passed as a string callable ('usort($a, 'cmp_fn')',
+    // array_map('fn', ...), register_shutdown_function('fn')) -- those used to count as
+    // no use at all, so a live callback was listed UNUSED.
+    $searchPattern = '/\b' . $q . '\s*\(|([\'"])' . $q . '\1/';
     $excludeDirs = ['docs', 'logs', 'notes', 'not_used', '.git'];
 
     // Cached: the same file list serves every function, and there are hundreds.
     static $allFiles = null;
     if ($allFiles === null) {
-        $allFiles = moop_registry_php_files($scanDirs, $rootPhpFiles ?: []);
+        global $usageOnlyFiles;
+        $allFiles = array_values(array_unique(array_merge(
+            moop_registry_php_files($scanDirs, $rootPhpFiles ?: []), $usageOnlyFiles ?? [])));
     }
 
     {
@@ -413,24 +488,33 @@ function findFunctionUsages($funcName, $scanDirs, $definitionFile) {
             
             if (strpos($filePath, 'function_registry') !== false || strpos($filePath, 'generate_registry') !== false) continue;
             
-            $content = file_get_contents($filePath);
-            
+            static $contentCache = [];
+            $content = $contentCache[$filePath] ??= (string) @file_get_contents($filePath);
+
             if (preg_match_all($searchPattern, $content, $matches, PREG_OFFSET_CAPTURE)) {
+                $lines = explode("\n", $content);   // once per file, not once per match
                 foreach ($matches[0] as $match) {
                     $lineNum = substr_count($content, "\n", 0, $match[1]) + 1;
-                    
-                    $lines = explode("\n", $content);
                     $contextLine = isset($lines[$lineNum - 1]) ? trim($lines[$lineNum - 1]) : '';
-                    
-                    if (preg_match('/^\s*(\/\/|#|\*)/', $contextLine) || preg_match('/\/\*.*\*\//', $contextLine)) {
+
+                    // Comment lines only. (A line merely CONTAINING /* ... */ used to be
+                    // skipped whole, real call included.)
+                    if (preg_match('/^(\/\/|#|\*|\/\*)/', $contextLine)) {
                         continue;
                     }
-                    
-                    if (preg_match('/^\s*(?:public\s+)?(?:static\s+)?function\s+' . preg_quote($funcName, '/') . '\s*\(/', $contextLine)) {
+                    // The definition itself, whatever its modifiers. The old pattern allowed
+                    // only public/static, so every private/protected method counted its own
+                    // definition as a use and could never be reported unused.
+                    if (preg_match('/\bfunction\s+&?' . $q . '\s*\(/', $contextLine)) {
                         continue;
                     }
-                    
-                    $relativeFilePath = str_replace(__DIR__ . '/../', '', $filePath);
+                    // A function_exists('name') guard is not a use -- but only THIS match is
+                    // skipped: `function_exists('f') ? f() : null` still counts its real call.
+                    if (preg_match('/function_exists\s*\(\s*$/', substr($content, max(0, $match[1] - 40), min(40, $match[1])))) {
+                        continue;
+                    }
+
+                    $relativeFilePath = moop_registry_relpath($filePath);
                     $usageKey = $relativeFilePath . ':' . $lineNum;
                     
                     if (isset($seen[$usageKey])) {
@@ -473,7 +557,7 @@ foreach ([null] as $_) {
         }
         if ($skip) continue;
         
-        $relativePath = str_replace(__DIR__ . '/../', '', $file);
+        $relativePath = moop_registry_relpath($file);
         $functions = extractFunctions($file, []);  // First pass without dependencies
         
         if (!empty($functions)) {
@@ -506,7 +590,7 @@ foreach ([null] as $_) {
         }
         if ($skip) continue;
         
-        $relativePath = str_replace(__DIR__ . '/../', '', $file);
+        $relativePath = moop_registry_relpath($file);
         $functions = extractFunctions($file, $allFunctionNames);  // Second pass WITH dependencies
         
         if (!empty($functions)) {
@@ -514,6 +598,41 @@ foreach ([null] as $_) {
         }
     }
 }
+
+// A function that calls a writer writes too (moop_feedback_set_status() saves through
+// moop_feedback_write()). Propagated to a fixpoint, through top-level functions with a
+// UNIQUE name only -- a call to "get" or "delete" could be any of several methods.
+$nameCount = [];
+foreach ($registry as $functions) {
+    foreach ($functions as $func) {
+        if (empty($func['isMethod'])) $nameCount[$func['name']] = ($nameCount[$func['name']] ?? 0) + 1;
+    }
+}
+$writers = [];
+foreach ($registry as $functions) {
+    foreach ($functions as $func) {
+        if (in_array('mutation', $func['tags'], true) && ($nameCount[$func['name']] ?? 0) === 1) $writers[$func['name']] = true;
+    }
+}
+do {
+    $changed = false;
+    foreach ($registry as &$functions) {
+        foreach ($functions as &$func) {
+            if (in_array('mutation', $func['tags'], true)) continue;
+            foreach ($func['internalCalls'] as $called) {
+                if (isset($writers[$called]) && $called !== $func['name']) {
+                    $func['tags'] = array_values(array_diff($func['tags'], ['readonly']));
+                    array_unshift($func['tags'], 'mutation');
+                    if (empty($func['isMethod']) && ($nameCount[$func['name']] ?? 0) === 1) $writers[$func['name']] = true;
+                    $changed = true;
+                    break;
+                }
+            }
+        }
+        unset($func);
+    }
+    unset($functions);
+} while ($changed);
 
 // Find duplicates and check for unused functions
 $funcMap = [];
@@ -523,6 +642,7 @@ $totalFuncs = 0;
 foreach ($registry as $file => $functions) {
     foreach ($functions as $func) {
         $totalFuncs++;
+        if (!empty($func['isMethod'])) continue;   // Foo::get and Bar::get are not duplicates
         $name = $func['name'];
         
         if (isset($funcMap[$name])) {
@@ -586,7 +706,6 @@ foreach ($registry as $file => $functions) {
         }
     }
     
-    ksort($fileEntry['functions'], SORT_NATURAL);
     $registryData['files'][] = $fileEntry;
 }
 
@@ -606,7 +725,7 @@ if (file_put_contents($jsonFile, $json)) {
     // owns it read-only to the other and the admin "Generate" button fails.
     @chmod($jsonFile, 0664);
     echo "\n✅ Registry generated successfully!\n";
-    echo "   File: " . str_replace(__DIR__ . '/../', '', $jsonFile) . "\n";
+    echo "   File: " . moop_registry_relpath($jsonFile) . "\n";
     echo "   Total Functions: " . $totalFuncs . "\n";
     echo "   Files Scanned: " . count($registry) . "\n";
     echo "   Unused Functions: " . count($registryData['unused']) . "\n";

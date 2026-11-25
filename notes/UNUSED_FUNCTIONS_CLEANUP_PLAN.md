@@ -1,6 +1,14 @@
 # Unused-Functions Cleanup Plan (future)
 
-Status: **not started — VERIFY BEFORE DELETING** (2026-07-10).
+Status: **DONE 2026-11-25.** 65 PHP functions/methods + 2 JS functions + the dead
+js/modules/manage-registry.js removed in one commit, after the registry generator was fixed
+(it skipped scripts/, tests/ and config/, missed string callables and listener-bound JS
+handlers -- its old "unused" list had live functions on it). Each name was checked with
+`git grep -w` over the whole repo (any mention outside comments = keep), every PHP file
+linted, all test suites green, 66 live pages visited without errors. Follow-up for functions
+that DUPLICATE each other under different names: SITE_WORK_LIST Inbox, "Function review".
+
+(Original status: not started — VERIFY BEFORE DELETING, 2026-07-10.)
 
 Source: `docs/function_registry.json` "unused functions" report (32 functions after the
 2026-07-10 regeneration). The registry finds these by static scan, so it **cannot see
