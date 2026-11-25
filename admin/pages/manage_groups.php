@@ -523,8 +523,8 @@
       
       $has_content = $has_images || $has_paragraphs;
     ?>
-      <div class="group-card <?= $desc['in_use'] ? 'in-use' : 'not-in-use' ?>" style="margin-bottom: 20px; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; background-color: #fff;">
-        <div class="group-header" onclick="toggleGroup(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)" style="cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">
+      <div class="group-card <?= $desc['in_use'] ? 'in-use' : 'not-in-use' ?>" data-group="<?= htmlspecialchars($desc['group_name']) ?>" style="margin-bottom: 20px; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; background-color: #fff;">
+        <div class="group-header" style="cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <?php if ($has_content): ?>
               <span style="color: #28a745; font-size: 18px; margin-right: 5px;" title="Has content">✓</span>
@@ -545,15 +545,15 @@
             </button>
             <?php endif; ?>
           </div>
-          <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+          <div class="d-flex align-items-center gap-2 group-actions">
             <?php if (!$file_write_error): ?>
               <button type="button" class="btn btn-danger btn-sm"
-                      onclick="deleteGroup(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)">
+                      data-action="delete-group">
                 <i class="fa fa-trash"></i> Delete Group
               </button>
             <?php endif; ?>
             <button type="button" class="btn btn-secondary btn-sm"
-                    onclick="toggleGroup(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)">
+                    data-action="toggle-group">
               <i class="fa fa-edit"></i> Edit
             </button>
           </div>
@@ -572,12 +572,11 @@
               <p class="text-muted small mb-2">Enter the Wikipedia article title for this group (e.g. <em>Platyhelminthes</em>, <em>Planaria</em>, <em>Bats</em>). Click <strong>Retrieve &amp; Save</strong> to fetch the description and image and store them below.</p>
               <input type="hidden" name="wikipedia_topic" id="wiki-topic-hidden-<?= htmlspecialchars($desc['group_name']) ?>" value="<?= htmlspecialchars($desc['wikipedia_topic'] ?? '') ?>">
               <div class="input-group">
-                <input type="text" class="form-control" id="wiki-topic-<?= htmlspecialchars($desc['group_name']) ?>"
+                <input type="text" class="form-control" id="wiki-topic-<?= htmlspecialchars($desc['group_name']) ?>" data-action-input="wiki-topic"
                        value="<?= htmlspecialchars($desc['wikipedia_topic'] ?? '') ?>"
-                       placeholder="e.g. Platyhelminthes"
-                       oninput="document.getElementById(<?= htmlspecialchars(json_encode('wiki-topic-hidden-' . $desc['group_name'])) ?>).value = this.value">
+                       placeholder="e.g. Platyhelminthes">
                 <button type="button" class="btn btn-outline-primary"
-                        onclick="fetchGroupWiki(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>, this)"
+                        data-action="fetch-wiki"
                         <?= $desc_file_write_error ? 'disabled' : '' ?>>
                   <i class="fa fa-download"></i> Retrieve &amp; Save
                 </button>
@@ -589,7 +588,7 @@
             <div id="images-container-<?= htmlspecialchars($desc['group_name']) ?>">
               <?php foreach ($desc['images'] as $idx => $image): ?>
                 <div class="image-item" data-index="<?= $idx ?>" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-                  <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>, <?= $idx ?>)" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
+                  <button type="button" class="btn btn-sm btn-danger remove-btn" data-action="remove-image" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
                   <div class="form-group">
                     <label>Image File</label>
                     <div class="input-group">
@@ -606,13 +605,13 @@
                 </div>
               <?php endforeach; ?>
             </div>
-            <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addImage(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Image</button>
+            <button type="button" class="btn btn-sm btn-primary mb-3" data-action="add-image" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Image</button>
             
             <h5>HTML Paragraphs</h5>
             <div id="paragraphs-container-<?= htmlspecialchars($desc['group_name']) ?>">
               <?php foreach ($desc['html_p'] as $idx => $para): ?>
                 <div class="paragraph-item" data-index="<?= $idx ?>" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-                  <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>, <?= $idx ?>)" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
+                  <button type="button" class="btn btn-sm btn-danger remove-btn" data-action="remove-paragraph" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
                   <div class="form-group">
                     <label>Text (HTML allowed)</label>
                     <textarea class="form-control para-text" rows="4"><?= htmlspecialchars($para['text']) ?></textarea>
@@ -630,7 +629,7 @@
                 </div>
               <?php endforeach; ?>
             </div>
-            <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addParagraph(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Paragraph</button>
+            <button type="button" class="btn btn-sm btn-primary mb-3" data-action="add-paragraph" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Paragraph</button>
 <?php
 // The description in the site's other languages (Admin -> Manage Languages) -- only on a site
 // that has more than one, so a one-language site's editor is exactly as before. Plain text.

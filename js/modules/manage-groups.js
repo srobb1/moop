@@ -23,28 +23,23 @@ $(document).ready(function() {
   }
 });
 
-// Group Description Functions (global scope)
-function toggleGroup(groupName) {
-  const content = document.getElementById('content-' + groupName);
-  const header = event.target.closest('.group-header');
-  const arrow = header.querySelector('span:last-child');
-  
-  if (content.style.display === 'none') {
-    content.style.display = 'block';
-    arrow.textContent = '▲';
-  } else {
-    content.style.display = 'none';
-    arrow.textContent = '▼';
-  }
+// Group Description Functions
+// Every action finds its OWN card (.group-card[data-group]) and its own entry from the clicked
+// button -- never a position number. (Until 2026-11-25 Remove went by the index the entry had
+// when the page loaded, so after one removal the next Remove hit a different entry, or none.)
+
+/** Open or close one group card's editor. */
+function toggleGroup(card) {
+  const content = card.querySelector('.group-content');
+  content.style.display = content.style.display === 'none' ? 'block' : 'none';
 }
 
-function addImage(groupName) {
-  const container = document.getElementById('images-container-' + groupName);
-  const newIndex = container.children.length;
+function addImage(card) {
+  const container = card.querySelector('[id^="images-container-"]');
   
   const html = `
-    <div class="image-item" data-index="${newIndex}" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-      <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage(${escapeHtml(JSON.stringify(groupName))}, ${newIndex})" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
+    <div class="image-item" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
+      <button type="button" class="btn btn-sm btn-danger remove-btn" data-action="remove-image" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
       <div class="form-group">
         <label>Image File</label>
         <div class="input-group">
@@ -65,11 +60,11 @@ function addImage(groupName) {
   attachImageUploadHandler(container.lastElementChild);
 }
 
-function removeImage(groupName, index) {
-  const container = document.getElementById('images-container-' + groupName);
-  const items = container.querySelectorAll('.image-item');
-  if (items.length > 1) {
-    items[index].remove();
+/** Remove the image entry whose Remove button was clicked (one must stay, it can be empty). */
+function removeImage(btn) {
+  const item = btn.closest('.image-item');
+  if (item.parentElement.querySelectorAll('.image-item').length > 1) {
+    item.remove();
   } else {
     alert('At least one image entry must remain (it can be empty).');
   }
@@ -120,13 +115,12 @@ function attachImageUploadHandler(imageItemElement) {
   });
 }
 
-function addParagraph(groupName) {
-  const container = document.getElementById('paragraphs-container-' + groupName);
-  const newIndex = container.children.length;
+function addParagraph(card) {
+  const container = card.querySelector('[id^="paragraphs-container-"]');
   
   const html = `
-    <div class="paragraph-item" data-index="${newIndex}" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-      <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph(${escapeHtml(JSON.stringify(groupName))}, ${newIndex})" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
+    <div class="paragraph-item" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
+      <button type="button" class="btn btn-sm btn-danger remove-btn" data-action="remove-paragraph" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
       <div class="form-group">
         <label>Text (HTML allowed)</label>
         <textarea class="form-control para-text" rows="4"></textarea>
@@ -147,11 +141,11 @@ function addParagraph(groupName) {
   container.insertAdjacentHTML('beforeend', html);
 }
 
-function removeParagraph(groupName, index) {
-  const container = document.getElementById('paragraphs-container-' + groupName);
-  const items = container.querySelectorAll('.paragraph-item');
-  if (items.length > 1) {
-    items[index].remove();
+/** Remove the paragraph entry whose Remove button was clicked (one must stay, it can be empty). */
+function removeParagraph(btn) {
+  const item = btn.closest('.paragraph-item');
+  if (item.parentElement.querySelectorAll('.paragraph-item').length > 1) {
+    item.remove();
   } else {
     alert('At least one paragraph entry must remain (it can be empty).');
   }
@@ -1074,3 +1068,38 @@ function deleteGroup(groupName) {
   document.getElementById('deleteGroupName').value = groupName;
   document.getElementById('deleteGroupForm').submit();
 }
+
+// One listener for every action on the group-description cards (they were inline onclick=
+// handlers until 2026-11-25; CSP). Buttons say WHAT with data-action; the card says WHICH group.
+document.addEventListener('click', function (e) {
+  const card = e.target.closest('.group-card[data-group]');
+  if (!card) return;
+  const group = card.dataset.group;
+  const btn = e.target.closest('[data-action]');
+
+  if (btn && card.contains(btn)) {
+    switch (btn.dataset.action) {
+      case 'toggle-group':     toggleGroup(card); break;
+      case 'delete-group':     deleteGroup(group); break;
+      case 'fetch-wiki':       fetchGroupWiki(group, btn); break;
+      case 'add-image':        addImage(card); break;
+      case 'remove-image':     removeImage(btn); break;
+      case 'add-paragraph':    addParagraph(card); break;
+      case 'remove-paragraph': removeParagraph(btn); break;
+    }
+    return;
+  }
+  // A click anywhere else on the header opens/closes the card -- but not one on its buttons
+  // (Delete, Edit, the featured star), which do their own thing.
+  if (e.target.closest('.group-header') && !e.target.closest('button, a, .group-actions')) {
+    toggleGroup(card);
+  }
+});
+
+// The Wikipedia topic box is copied into the form's hidden field as it is typed, so Save
+// Changes keeps it even without Retrieve & Save.
+document.addEventListener('input', function (e) {
+  if (e.target.dataset.actionInput !== 'wiki-topic') return;
+  const hidden = e.target.closest('.group-card').querySelector('input[name="wikipedia_topic"]');
+  if (hidden) hidden.value = e.target.value;
+});
