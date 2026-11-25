@@ -267,14 +267,13 @@
         <div class="d-flex align-items-center gap-2 flex-wrap">
           <span id="refreshStatus" class="text-muted small" style="display:none;"></span>
           <span id="syncTaxonomyStatus" class="text-muted small" style="display:none;"></span>
-          <button id="rescanBtn" class="btn btn-sm btn-primary" onclick="rescanOrganisms(this)" title="Rescan only organisms whose files changed since last cache">
+          <button id="rescanBtn" class="btn btn-sm btn-primary" title="Rescan only organisms whose files changed since last cache">
             <i class="fa fa-sync-alt"></i> Refresh Cache
           </button>
-          <button id="forceRescanBtn" class="btn btn-sm btn-outline-secondary" onclick="forceRescanOrganisms()" title="Rescan all organisms regardless of cache state — use when the cache seems wrong">
+          <button id="forceRescanBtn" class="btn btn-sm btn-outline-secondary" title="Rescan all organisms regardless of cache state — use when the cache seems wrong">
             <i class="fa fa-redo"></i> Force Full Rescan
           </button>
           <button id="syncTaxonomyBtn" class="btn btn-sm btn-outline-secondary"
-                  onclick="syncNcbiTaxonomy(this, document.getElementById('syncTaxonomyStatus'))"
                   title="Download NCBI taxonomy dump and populate lineage cache — eliminates per-organism API calls">
             <i class="fa fa-download"></i> Sync NCBI Taxonomy
           </button>
@@ -385,7 +384,7 @@
                $row_issues = $row_tokens[$organism];
                $row_status = $row_severity[$organism];
              ?>
-             <tr data-status="<?= $row_status ?>"
+             <tr data-status="<?= $row_status ?>" data-organism="<?= htmlspecialchars($organism) ?>"
                  data-issues="<?= implode(' ', $row_issues) ?>"
                  <?= $is_stale ? 'class="table-warning"' : '' ?>>
                <td>
@@ -408,11 +407,11 @@
                    <br><small class="text-muted"><?= htmlspecialchars($data['info']['common_name']) ?></small>
                  <?php endif; ?>
                  <br>
-                 <button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, <?= htmlspecialchars(json_encode($data['path'])) ?>, <?= htmlspecialchars(json_encode($organism)) ?>)">
+                 <button class="btn btn-sm btn-outline-secondary" type="button" data-action="toggle-path" data-path="<?= htmlspecialchars($data['path']) ?>">
                    <i class="fa fa-folder"></i> View Path
                  </button>
                  <button class="btn btn-sm btn-outline-secondary" type="button"
-                         onclick="rescanSingleOrganism(this, <?= htmlspecialchars(json_encode($organism)) ?>)"
+                         data-action="rescan-one"
                          title="Force rescan this organism only">
                    <i class="fa fa-sync-alt"></i> Rescan
                  </button>
@@ -432,7 +431,7 @@
                  <?php endif; ?>
                  <?php if (!$in_groups): ?>
                    <button class="btn btn-sm btn-outline-primary mt-1"
-                           onclick="openQuickAddGroupModal(<?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_groups_id)) ?>)">
+                           data-action="quick-add-group" data-cell="<?= htmlspecialchars($safe_groups_id) ?>">
                      <i class="fa fa-plus"></i> Add to Group
                    </button>
                  <?php endif; ?>
@@ -454,9 +453,8 @@
                        if (!$s['gene_sets'] && !$s['blast_only']) $asm_chips[] = ['No gene set', 'No gene-set directory with FASTA files -- no genes will show for this assembly'];
                        if ($s['genome_unindexed']) $asm_chips[] = ['Genome not BLAST-indexed', 'A BLAST-only genome with no BLAST index -- it cannot be searched. Build it from the Organism Checklist'];
                        if ($s['no_fai'])     $asm_chips[] = ['Genome not indexed (.fai)', 'genome.fa is present but genome.fa.fai is not -- the sequence viewer needs it'];
-                       $asm_js = htmlspecialchars(json_encode($organism)) . ', ' . htmlspecialchars(json_encode($assembly));
                      ?>
-                       <button type="button" class="asm-line" onclick="openOrganismModal('asm', <?= $asm_js ?>)" title="Open assembly details">
+                       <button type="button" class="asm-line" data-action="modal" data-modal="asm" data-assembly="<?= htmlspecialchars($assembly) ?>" title="Open assembly details">
                          <i class="fa fa-folder text-muted"></i> <span class="fw-semibold"><?= htmlspecialchars($s['display']) ?></span>
                          <?php foreach ($asm_chips as [$txt, $tip]): ?>
                            <span class="badge rounded-pill border text-dark bg-warning-subtle" title="<?= htmlspecialchars($tip) ?>"><?= htmlspecialchars($txt) ?></span>
@@ -472,7 +470,7 @@
                          <?php endif; ?>
                        </button>
                        <?php foreach ($s['gene_sets'] as $gs => $g): ?>
-                         <button type="button" class="gs-line" onclick="openOrganismModal('asm', <?= $asm_js ?>, <?= htmlspecialchars(json_encode($gs)) ?>)" title="Open this gene set's details">
+                         <button type="button" class="gs-line" data-action="modal" data-modal="asm" data-assembly="<?= htmlspecialchars($assembly) ?>" data-gene-set="<?= htmlspecialchars($gs) ?>" title="Open this gene set's details">
                            <span class="text-muted">└</span> <i class="fa fa-stream text-muted"></i> <?= htmlspecialchars($gs) ?>
                            <?php foreach ($g['missing'] as $t): ?>
                              <span class="badge rounded-pill border text-dark bg-warning-subtle" title="<?= htmlspecialchars($t) ?> FASTA file is missing">No <?= htmlspecialchars($t) ?></span>
@@ -527,7 +525,7 @@
                    $visible_issues = array_values(array_filter(array_intersect(array_keys($issue_defs), $row_issues),
                                                                fn($i) => !empty($issue_defs[$i]['health'])));
                  ?>
-                 <button class="btn btn-sm btn-outline-<?= $hstate[0] ?>" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Open the setup checklist">
+                 <button class="btn btn-sm btn-outline-<?= $hstate[0] ?>" data-action="modal" data-modal="status" title="Open the setup checklist">
                    <i class="fa fa-<?= $hstate[1] ?>"></i> <?= $hstate[2] ?>
                  </button>
                  <?php if ($visible_issues): ?>
@@ -538,8 +536,8 @@
                    </div>
                  <?php endif; ?>
                  <div class="mt-1 d-flex gap-1">
-                   <button class="btn btn-sm btn-outline-<?= $db_class ?> px-2 py-0" onclick="openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Database details &amp; row counts"><i class="fa fa-database"></i></button>
-                   <button class="btn btn-sm btn-outline-<?= $meta_class ?> px-2 py-0" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Metadata &amp; editor"><i class="fa fa-file-alt"></i></button>
+                   <button class="btn btn-sm btn-outline-<?= $db_class ?> px-2 py-0" data-action="modal" data-modal="db" title="Database details &amp; row counts"><i class="fa fa-database"></i></button>
+                   <button class="btn btn-sm btn-outline-<?= $meta_class ?> px-2 py-0" data-action="modal" data-modal="metadata" title="Metadata &amp; editor"><i class="fa fa-file-alt"></i></button>
                    <button class="btn btn-sm btn-outline-secondary px-2 py-0 js-retire" type="button" data-organism="<?= htmlspecialchars($organism) ?>" title="Retire this organism — take it off the site (can be restored)"><i class="fa fa-archive"></i></button>
                  </div>
                </td>
@@ -689,14 +687,13 @@
         <p class="text-muted small mb-2">Organism: <strong id="quickAddOrgName"></strong></p>
         <label class="form-label fw-bold" for="quickAddGroupName">Group Name</label>
         <input type="text" class="form-control" id="quickAddGroupName"
-               list="quickAddGroupList" placeholder="e.g. Bats, Public, Insects"
-               onkeydown="if(event.key==='Enter') submitQuickAddGroup()">
+               list="quickAddGroupList" placeholder="e.g. Bats, Public, Insects">
         <datalist id="quickAddGroupList"></datalist>
         <div id="quickAddResult" class="mt-2" style="display:none;"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary btn-sm" id="quickAddSubmitBtn" onclick="submitQuickAddGroup()">
+        <button type="button" class="btn btn-primary btn-sm" id="quickAddSubmitBtn">
           <i class="fa fa-plus"></i> Add Group
         </button>
       </div>

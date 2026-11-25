@@ -506,28 +506,25 @@ function removeFeatureTag(element, organism) {
  * Toggle Path Display
  * Shows/hides the organism directory path
  */
-function togglePath(button, organism_path, organism) {
-    const pathId = 'path-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
-    let pathDiv = document.getElementById(pathId);
-    
-    if (pathDiv) {
-        // Already exists, toggle visibility
-        if (pathDiv.style.display === 'none') {
-            pathDiv.style.display = 'block';
-            button.innerHTML = '<i class="fa fa-folder-open"></i> Hide Path';
-        } else {
-            pathDiv.style.display = 'none';
-            button.innerHTML = '<i class="fa fa-folder"></i> View Path';
-        }
-    } else {
-        // Create the path display
-        pathDiv = document.createElement('div');
-        pathDiv.id = pathId;
-        pathDiv.className = 'mt-2';
-        pathDiv.innerHTML = '<small class="font-monospace text-muted" style="user-select: all; cursor: text;">' + organism_path + '</small>';
-        button.parentNode.insertBefore(pathDiv, button.nextSibling);
-        button.innerHTML = '<i class="fa fa-folder-open"></i> Hide Path';
+function togglePath(button, organism_path) {
+    // The path box sits right after the button (found from it, not by an id built from the
+    // organism name, which two names could share). textContent: the path is shown, not parsed.
+    let pathDiv = button.nextElementSibling;
+    if (pathDiv && pathDiv.classList.contains('org-path')) {
+        const hidden = pathDiv.style.display === 'none';
+        pathDiv.style.display = hidden ? 'block' : 'none';
+        button.innerHTML = hidden ? '<i class="fa fa-folder-open"></i> Hide Path' : '<i class="fa fa-folder"></i> View Path';
+        return;
     }
+    pathDiv = document.createElement('div');
+    pathDiv.className = 'mt-2 org-path';
+    const small = document.createElement('small');
+    small.className = 'font-monospace text-muted';
+    small.style.cssText = 'user-select: all; cursor: text;';
+    small.textContent = organism_path;
+    pathDiv.appendChild(small);
+    button.after(pathDiv);
+    button.innerHTML = '<i class="fa fa-folder-open"></i> Hide Path';
 }
 
 function attachImageUploadHandler(imageItemElement, organism) {
@@ -849,3 +846,31 @@ function _updateGroupsCell(cellId, organism, groupName) {
     }
   });
 }
+
+// ── Page controls (inline onclick= handlers until 2026-11-25; CSP) ─────────────
+// Buttons say WHAT with data-action; the table row says WHICH organism (tr[data-organism]).
+document.addEventListener('click', function (e) {
+  const top = e.target.closest('#rescanBtn, #forceRescanBtn, #syncTaxonomyBtn, #quickAddSubmitBtn');
+  if (top) {
+    if (top.id === 'rescanBtn')         rescanOrganisms(top);
+    if (top.id === 'forceRescanBtn')    forceRescanOrganisms();
+    if (top.id === 'syncTaxonomyBtn')   syncNcbiTaxonomy(top, document.getElementById('syncTaxonomyStatus'));
+    if (top.id === 'quickAddSubmitBtn') submitQuickAddGroup();
+    return;
+  }
+  const btn = e.target.closest('[data-action]');
+  const row = btn && btn.closest('tr[data-organism]');
+  if (!row) return;
+  const organism = row.dataset.organism;
+  switch (btn.dataset.action) {
+    case 'toggle-path':     togglePath(btn, btn.dataset.path); break;
+    case 'rescan-one':      rescanSingleOrganism(btn, organism); break;
+    case 'quick-add-group': openQuickAddGroupModal(organism, btn.dataset.cell); break;
+    case 'modal':           openOrganismModal(btn.dataset.modal, organism, btn.dataset.assembly, btn.dataset.geneSet); break;
+  }
+});
+
+// Enter in the Quick Add Group box adds the group
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && e.target.id === 'quickAddGroupName') submitQuickAddGroup();
+});
