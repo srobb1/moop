@@ -59,6 +59,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Successful login: clear failure counters and regenerate session
         reset_login_failures($username, $visitor_ip);
         session_regenerate_id(true);
+        // When and how often each account logs in (Manage Users shows it). Never blocks the login.
+        require_once __DIR__ . '/lib/user_activity.php';
+        moop_user_activity_login($username);
         // Store login info in session
         $_SESSION["logged_in"] = true;
         $_SESSION["username"] = $username;

@@ -833,6 +833,8 @@ function housekeeping_snapshot_site_data(bool $persist = true) {
         // Messages from visitors (tools/feedback.php, lib/feedback.php): next to users.json, may hold
         // email addresses. Missing until the first message -- the snapshot skips absent files.
         dirname($users_file) . '/feedback.json'                => 'feedback.json',
+        // When each account was made / last logged in (lib/user_activity.php): names users, next to users.json.
+        dirname($users_file) . '/user_activity.json'           => 'user_activity.json',
         // The site's own stylesheet (head-resources.php loads it if present; planosphere's look,
         // 2026-11-11). Site data, not code: git-ignored, so the backup is its only other copy.
         $site_path . '/css/custom.css'                          => 'css/custom.css',

@@ -69,3 +69,23 @@
   overflow-y: auto;
   min-height: 0;
 }
+
+/* Users table (admin/pages/manage_users.php): who / access / activity, compact rows. */
+.um-wrap { padding: 0.5rem 1rem 0.75rem; }
+.um-wrap .dataTables_filter, .um-wrap .dt-search { margin-bottom: 0.5rem; }
+.um-table thead th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: #5f6b73; font-weight: 600;
+  border-bottom-width: 1px; white-space: nowrap; }
+.um-table td { padding-top: 0.55rem; padding-bottom: 0.55rem; font-size: 0.9rem; }
+.um-username { font-weight: 600; }
+.um-who { font-size: 0.82rem; color: #6c757d; }
+.um-who a { color: inherit; }
+.um-sub { font-size: 0.8rem; color: #6c757d; }
+.um-stale { display: inline-block; margin-left: 4px; padding: 0 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+  background: #fff4e3; border: 1px solid #f3cf9a; color: #7a4a0c; text-decoration: none; white-space: nowrap; }
+.um-stale:hover { background: #fbe0b8; color: #5b3a0c; }
+#stale-audit-card { scroll-margin-top: 72px; }
+@media (max-width: 999.98px) {
+  .um-btn-label { display: none; }
+  .um-wrap { padding-left: 0.5rem; padding-right: 0.5rem; }
+  .um-table > :not(caption) > * > * { padding-left: 0.4rem; padding-right: 0.4rem; }
+}

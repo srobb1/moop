@@ -11,6 +11,7 @@
 
 include_once __DIR__ . '/admin_init.php';
 include_once __DIR__ . '/../includes/layout.php';
+require_once __DIR__ . '/../lib/user_activity.php';
 
 // Get config
 $siteTitle = $config->getString('siteTitle');
@@ -150,6 +151,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     ];
 
                     if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+                        moop_user_activity_created($username);   // the Created column (lib/user_activity.php)
                         $message = "User $username created successfully!";
                         $messageType = "success";
                     } else {
@@ -194,6 +196,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (isset($users[$username])) {
             unset($users[$username]);
             if (file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT))) {
+                moop_user_activity_forget($username);
                 $message = "User $username deleted successfully!";
                 $messageType = "success";
             } else {
@@ -309,6 +312,7 @@ $display_config = [
 // Prepare data for content file
 $data = [
     'users' => $users,
+    'user_activity' => moop_user_activity_all() ?? [],   // null (unreadable) -> blank columns, not an error page
     'organisms' => $organisms,
     'file_write_error' => $file_write_error,
     'message' => $message,
@@ -320,6 +324,7 @@ $data = [
     ],
     'page_script' => [
         moop_url_base() . '/js/admin-utilities.js',
+        moop_url_base() . '/js/manage-users.js',
     ],
     'inline_scripts' => [
         "const allOrganisms = " . json_encode($orgs_with_gene_sets) . ";",

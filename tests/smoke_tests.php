@@ -5440,6 +5440,29 @@ file_put_contents($_fbf, json_encode(array_fill(0, MOOP_FEEDBACK_DAY_CAP, ['id' 
 ok(moop_feedback_add($_fm, [], $_fbf) === 'cap', 'feedback: the site-wide daily cap holds');
 array_map('unlink', glob("$_fbd/*")); @rmdir($_fbd);
 
+// Account activity (lib/user_activity.php, 2026-11-25): logins counted, creation dated, a backfill
+// never overrides a recorded date, a delete forgets, a broken file is left alone, never world-readable.
+require_once __DIR__ . '/../lib/user_activity.php';
+$_uad = sys_get_temp_dir() . '/moop_ua_' . getmypid(); @mkdir($_uad); $_uaf = "$_uad/user_activity.json";
+$_now = 1_800_000_000;
+ok(moop_user_activity_login('ann', $_uaf, $_now - 40 * 86400) && moop_user_activity_login('ann', $_uaf, $_now - 86400)
+   && moop_user_activity_login('ann', $_uaf, $_now), 'user activity: three logins saved');
+$_ua = moop_user_activity_all($_uaf)['ann'];
+ok($_ua['login_count'] === 3 && $_ua['last_login'] === $_now && moop_user_activity_recent($_ua, 30, $_now) === 2
+   && $_ua['created'] === null && (fileperms($_uaf) & 0007) === 0,
+   'user activity: count, last login, logins in the last 30 days; never world-readable');
+moop_user_activity_created('bob', $_now - 5 * 86400, 'manage_users', $_uaf);
+moop_user_activity_created('bob', $_now - 90 * 86400, 'backup_history', $_uaf);
+moop_user_activity_created('ann', $_now - 90 * 86400, 'backup_history', $_uaf);
+$_ua = moop_user_activity_all($_uaf);
+ok($_ua['bob']['created'] === $_now - 5 * 86400 && $_ua['ann']['created'] === $_now - 90 * 86400 && $_ua['ann']['login_count'] === 3,
+   'user activity: a backfill never replaces a date Manage Users recorded, and fills one that is missing');
+ok(moop_user_activity_forget('bob', $_uaf) && !isset(moop_user_activity_all($_uaf)['bob']), 'user activity: a deleted account is forgotten');
+file_put_contents($_uaf, '{broken');
+ok(!@moop_user_activity_login('ann', $_uaf, $_now) && file_get_contents($_uaf) === '{broken',
+   'user activity: an unreadable file is refused and left exactly as it was');
+array_map('unlink', glob("$_uad/*")); @rmdir($_uad);
+
 // ----------------------------------------------------------------------------
 group('Command-line PHP never runs from a URL (CLAUDE.md §8b)');
 // scripts/ and tests/ are inside the document root: nginx runs any .php there for anyone who

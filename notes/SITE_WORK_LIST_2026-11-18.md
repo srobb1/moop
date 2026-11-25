@@ -17,7 +17,7 @@ Order of work, and why:
 ---
 
 ## 0. The move (in progress)
-- [ ] **TODAY 11-24, before Sofia logs off: apply the critical system updates.** Report of 11-24 00:19
+- [x] DONE (verified 11-25: report of 11-25 00:41 lists no pending updates; php-fpm 8.0.30-8.el9_9.2, running kernel 741.27.1; setup-check 0 FAIL on all 3 sites). **TODAY 11-24, before Sofia logs off: apply the critical system updates.** Report of 11-24 00:19
       (/var/www/moop-cache/security_updates.txt): **Critical** php 8.0.30-8.el9_9.2 (php, -fpm, -cli, -common,
       -gd, -mbstring, -opcache, -pdo, -xml); Important: kernel 741.27.1, podman, containernetworking-plugins;
       Moderate: openssh. `sudo dnf update --security`, then `sudo systemctl restart php-fpm` (and a reboot
@@ -228,6 +228,24 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [x] DONE 11-25. **Account activity on Manage Users (Sofia 11-25):** Created / Last login /
+      Logins (30 d / all) columns. lib/user_activity.php keeps {private}/user_activity.json (NOT users.json: Manage
+      Users rewrites that unlocked); login.php records, Manage Users records create / forgets delete; backup +
+      'sensitive' permission rule; smoke tests. Counts start 11-25. Older accounts: Sofia runs
+      `sudo -u apache php scripts/backfill_user_created.php --write` (dates from the site-data git history, shown "≈").
+      Same day: Users table rebuilt (5 columns: User = name/email under username, Access, Created, Last login, Logins;
+      Stale column -> amber notice at top + per-row chip that opens the Stale card; paging only past 25 users), and
+      the page's 848-line inline script moved to js/manage-users.js (dead js/modules/manage-users.js deleted).
+- [ ] **Inline JavaScript left in 4 templates (found 11-25):** admin/pages/manage_blast_linkouts.php (105 lines),
+      tools/pages/parent.php (97), tools/pages/retrieve_sequences.php (10), admin/pages/manage_groups.php (7) -> page
+      script files (CLAUDE.md §7). Then the ~154 inline on* handlers, which keep 'unsafe-inline' in the CSP. **S each / L**
+- [ ] **In situ tables' gene names differ from the gene pages' names (Sofia 11-25). TALK to Davies.** The "In Situ
+      Hybridization Data" tables on the 17 written PLANA pages (Stages 2-8 + 9 tissue pages, site data
+      metadata/pages/*.json; Gene Name + Alias columns) carry the names from the old Planosphere pages (Davies lab),
+      which do not match the names our gene pages show for the same SMED300... IDs (smed_20140614). Undecided:
+      update the tables to our names, keep theirs as published, or show both. Ask Davies which names are current /
+      preferred before changing anything. Not yet listed: which genes differ and how (a side-by-side would help the talk).
+      **Leaning (Sofia 11-25): change the tables to our names -- but ON HOLD, do not change yet.** **TALK**
 - [ ] **Term page redesign vs ANATOMY terms (PLANA) (Sofia 11-25).** The two-column layout + full-width header
       (11-25) was designed around GO genes. Anatomy terms have little in the data column (records + images) and a long
       term column (Parts and relationships), and Sofia found the old Jump-to sidebar good there. Review PLANA term
@@ -370,10 +388,10 @@ Planosphere
       (also Nematostella 5, Petromyzon 6, Amphimedon 2, Notamacropus 1). Code: swissprot_name() (assign_gene_names_v2.pl ~3120) excludes only human hits, not the gene's own
       species, though its comment says "another species". If that Swiss-Prot entry IS this gene,
       "-like" understates it; if a paralog, the species label is fine. Tell compute; web does nothing. **S (compute)**
-- [ ] **Agent API: Primer Maker AND Primer BLAST (the primer checker) too (Sofia, 11-24):** after the BLAST endpoint,
+- [x] DONE 11-24 (48a7c527: api/v1/primer_maker.php + primer_blast.php). **Agent API: Primer Maker AND Primer BLAST (the primer checker) too (Sofia, 11-24):** after the BLAST endpoint,
       same shape (submit -> job id -> poll, small limits). Each new endpoint also gets: its AI-page question(s),
       its llms.txt entry, and rate_limit_heavy. **M each**
-- [ ] **BLAST part BUILT 11-24 (api/v1/blast.php + lib/blast_jobs.php + scripts/blast_job.php; Primer Maker + Primer BLAST still to do).** Background worker in the same blast_queue; page AND API save TXT/TSV/XML in {cache}/blast_jobs/<id> (24 h) and serve the same files (page downloads were NOT BLAST's bytes: TXT had template indentation, all three CRLF from the form post -- fixed). Measured: 5 queries in one run 1.6 s vs 2.6 s (blastp), 17.7 vs 32 s (tblastn genome), cold = warm -> limit 10 seqs / 100k letters per job, 1 active job per client. **Agent API: run BLAST politely (Sofia, 11-23):** api/v1 endpoint so an AI agent can submit a BLAST and
+- [x] DONE 11-24 (BLAST 76724d55, primers 48a7c527). **BLAST part BUILT 11-24 (api/v1/blast.php + lib/blast_jobs.php + scripts/blast_job.php; Primer Maker + Primer BLAST still to do).** Background worker in the same blast_queue; page AND API save TXT/TSV/XML in {cache}/blast_jobs/<id> (24 h) and serve the same files (page downloads were NOT BLAST's bytes: TXT had template indentation, all three CRLF from the form post -- fixed). Measured: 5 queries in one run 1.6 s vs 2.6 s (blastp), 17.7 vs 32 s (tblastn genome), cold = warm -> limit 10 seqs / 100k letters per job, 1 active job per client. **Agent API: run BLAST politely (Sofia, 11-23):** api/v1 endpoint so an AI agent can submit a BLAST and
       collect the result -- through the SAME blast_queue.php queue (flock, bounded, never stuck), submit returns a
       job id + "check back in N s", poll endpoint, small per-client limits (one running job, max query length /
       sequences / max_target_seqs), results as JSON + Markdown. Document it in llms.txt + help topic ai-assistants.
@@ -489,7 +507,7 @@ Planosphere
       whether the old FASTA was meant to be wider or the tables lost rows in the port. **TALK**
 - [x] DONE 11-20 (E): tile -> SIMRbase Ontology Browser. **Sofia: Planosphere Tools page "PLANA Ontology" tile** links to obofoundry.org — switch to SIMRbase's
       Ontology Browser (`{simrbase}/tools/ontology_browser.php?o=PLANA`)? **S** once decided
-- [ ] **Sofia (root): SIMRbase site-data backup can't be written by smr** — old copies are 644 apache, so
+- [x] DONE (verified 11-25: no world-readable file left in /var/www/moop-site-data; backup_site_data.php ran as smr). **Sofia (root): SIMRbase site-data backup can't be written by smr** — old copies are 644 apache, so
       `scripts/backup_site_data.php` fails (housekeeping still copies hourly). One-time fix:
       `sudo find '/var/www/moop-site-data' -path '*/.git' -prune -o -type d -exec chmod 2770 {} + -o -type f -exec chmod 660 {} +` **S**
 - [ ] **Email from the site** (Sofia, 11-23) -- WHAT should send one: notes/EMAIL_ALERTS_PLAN.md (21 items:
