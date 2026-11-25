@@ -168,10 +168,9 @@
               </td>
               <td>
                 <?php if ($item['has_genome']): ?>
-                <button class="btn btn-sm btn-primary"
+                <button type="button" class="btn btn-sm btn-primary" data-action="register-assembly"
                         data-organism="<?php echo htmlspecialchars($item['organism']); ?>"
-                        data-assembly="<?php echo htmlspecialchars($item['assembly']); ?>"
-                        onclick="registerAssembly(this.dataset.organism, this.dataset.assembly, this)">
+                        data-assembly="<?php echo htmlspecialchars($item['assembly']); ?>">
                   <i class="fa fa-plus"></i> Register
                 </button>
                 <?php else: ?>
@@ -296,7 +295,7 @@
               <div id="jwtStatusDisplay">
                 <span class="text-muted"><i class="fa fa-spinner fa-spin"></i> Checking...</span>
               </div>
-              <button class="btn btn-sm btn-outline-secondary mt-2" onclick="testJWT()">
+              <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="testJwtBtn">
                 <i class="fa fa-check-circle"></i> Test JWT Key Pair
               </button>
             </div>
@@ -306,10 +305,10 @@
               <h6><i class="fa fa-key"></i> JWT Public Key</h6>
               <p class="text-muted small mb-2">Copy this to your remote tracks server's <code>certs/jwt_public_key.pem</code></p>
               <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-primary" onclick="showJWTPublicKey()">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="showJwtKeyBtn">
                   <i class="fa fa-eye"></i> Show Public Key
                 </button>
-                <button class="btn btn-sm btn-outline-success" onclick="copyJWTPublicKey()">
+                <button type="button" class="btn btn-sm btn-outline-success" id="copyJwtKeyBtn">
                   <i class="fa fa-copy"></i> Copy to Clipboard
                 </button>
               </div>
@@ -357,7 +356,7 @@
             <button type="submit" class="btn btn-dark">
               <i class="fa fa-save"></i> Save Configuration
             </button>
-            <button type="button" class="btn btn-outline-secondary" onclick="loadTracksServerConfig()">
+            <button type="button" class="btn btn-outline-secondary" id="tracksServerResetBtn">
               <i class="fa fa-undo"></i> Reset
             </button>
           </div>
@@ -387,13 +386,13 @@
         </div>
         <div class="col-md-3">
           <label for="filterAssembly" class="form-label">Assembly</label>
-          <select class="form-select" id="filterAssembly" onchange="filterTracks()" disabled>
+          <select class="form-select" id="filterAssembly" disabled>
             <option value="">All</option>
           </select>
         </div>
         <div class="col-md-3">
           <label for="filterType" class="form-label">Track Type</label>
-          <select class="form-select" id="filterType" onchange="filterTracks()">
+          <select class="form-select" id="filterType">
             <option value="">All</option>
             <?php foreach ($track_stats['by_type'] as $type => $count): ?>
             <option value="<?php echo htmlspecialchars($type); ?>"><?php echo htmlspecialchars($type); ?> (<?php echo $count; ?>)</option>
@@ -402,7 +401,7 @@
         </div>
         <div class="col-md-3">
           <label for="filterAccess" class="form-label">Access Level</label>
-          <select class="form-select" id="filterAccess" onchange="filterTracks()">
+          <select class="form-select" id="filterAccess">
             <option value="">All</option>
             <?php foreach ($track_stats['by_access'] as $access => $count): ?>
             <option value="<?php echo htmlspecialchars($access); ?>"><?php echo htmlspecialchars($access); ?> (<?php echo $count; ?>)</option>
@@ -416,7 +415,7 @@
         <table id="tracksTable" class="table table-striped table-hover" style="width:100%">
           <thead>
             <tr>
-              <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+              <th><input type="checkbox" id="selectAll" aria-label="Select all tracks"></th>
               <th>Track Name</th>
               <th>Organism</th>
               <th>Assembly</th>

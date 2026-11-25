@@ -152,11 +152,11 @@ foreach ($paginatedTracks as $item) {
     $canIndex   = $isLocalGff || $isLocalBed;
 
     $rebuildBtn = $isLocalGff
-        ? '<button class="btn btn-outline-warning btn-sm" onclick="rebuildGff(' . htmlspecialchars(json_encode($organism), ENT_QUOTES) . ', ' . htmlspecialchars(json_encode($assembly), ENT_QUOTES) . ', this)" title="Rebuild bgzip + tabix index"><i class="fa fa-wrench"></i></button>'
+        ? '<button type="button" class="btn btn-outline-warning btn-sm" data-action="rebuild-gff" data-organism="' . htmlspecialchars($organism, ENT_QUOTES) . '" data-assembly="' . htmlspecialchars($assembly, ENT_QUOTES) . '" title="Rebuild bgzip + tabix index" aria-label="Rebuild bgzip + tabix index"><i class="fa fa-wrench"></i></button>'
         : '';
 
     $indexBtn = $canIndex
-        ? '<button class="btn btn-outline-info btn-sm" onclick="indexTrackNames(' . htmlspecialchars(json_encode($trackId), ENT_QUOTES) . ', ' . htmlspecialchars(json_encode($organism), ENT_QUOTES) . ', ' . htmlspecialchars(json_encode($assembly), ENT_QUOTES) . ', this)" title="Build text search index (jbrowse text-index)"><i class="fa fa-search-plus"></i></button>'
+        ? '<button type="button" class="btn btn-outline-info btn-sm" data-action="index-names" data-track-id="' . htmlspecialchars($trackId, ENT_QUOTES) . '" data-organism="' . htmlspecialchars($organism, ENT_QUOTES) . '" data-assembly="' . htmlspecialchars($assembly, ENT_QUOTES) . '" title="Build text search index (jbrowse text-index)" aria-label="Build text search index"><i class="fa fa-search-plus"></i></button>'
         : '';
 
     // Everything the View Details dialog shows, carried in the row data so the dialog
@@ -182,7 +182,7 @@ foreach ($paginatedTracks as $item) {
 
     $data[] = [
         'details' => $details,
-        'checkbox' => $isGeneTrack ? '' : '<input type="checkbox" name="trackSelect" onchange="updateBulkButtons()">',
+        'checkbox' => $isGeneTrack ? '' : '<input type="checkbox" name="trackSelect" aria-label="Select track">',
         'name' => '<strong>' . htmlspecialchars($name) . '</strong><br><small class="text-muted">' . htmlspecialchars($trackId) . '</small>',
         'organism' => htmlspecialchars($organism),
         'assembly' => htmlspecialchars($assembly),

@@ -546,14 +546,19 @@ function testJWT() {
     fetch(`${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
+            // Server text escaped before it goes into the page.
             if (data.success) {
                 statusDiv.innerHTML = `
-                    <span class="text-success"><i class="fa fa-check-circle"></i> ${data.message}</span>
-                    <br><small class="text-muted">Scope: ${data.token_scope} | Expires: ${data.expires_in}</small>
+                    <span class="text-success"><i class="fa fa-check-circle"></i> ${escapeHtml(String(data.message ?? ''))}</span>
+                    <br><small class="text-muted">Scope: ${escapeHtml(String(data.token_scope ?? ''))} | Expires: ${escapeHtml(String(data.expires_in ?? ''))}</small>
                 `;
             } else {
-                statusDiv.innerHTML = `<span class="text-danger"><i class="fa fa-times-circle"></i> ${data.error}</span>`;
+                statusDiv.innerHTML = `<span class="text-danger"><i class="fa fa-times-circle"></i> ${escapeHtml(String(data.error ?? 'Test failed'))}</span>`;
             }
+        })
+        // There was no catch: a failed request left "Testing..." spinning for good.
+        .catch(err => {
+            statusDiv.innerHTML = `<span class="text-danger"><i class="fa fa-times-circle"></i> Could not run the test: ${escapeHtml(String(err.message || err))}</span>`;
         });
 }
 
@@ -592,6 +597,28 @@ $(document).ready(function() {
     if (typeof jbrowseOrganisms !== 'undefined' && typeof sitePath !== 'undefined') {
         initJBrowseAdmin(jbrowseOrganisms, sitePath);
     }
+
+    // Page controls (inline onclick=/onchange= until 2026-11-25; CSP)
+    const on = (id, evt, fn) => document.getElementById(id)?.addEventListener(evt, fn);
+    on('testJwtBtn', 'click', testJWT);
+    on('showJwtKeyBtn', 'click', showJWTPublicKey);
+    on('copyJwtKeyBtn', 'click', copyJWTPublicKey);
+    on('tracksServerResetBtn', 'click', () => loadTracksServerConfig());
+    ['filterAssembly', 'filterType', 'filterAccess'].forEach(id => on(id, 'change', filterTracks));
+    on('selectAll', 'change', toggleSelectAll);
+    // Row buttons (unregistered assemblies; the track table, whose rows come from
+    // admin/api/jbrowse_list_tracks.php): each button says what, and for which track.
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const d = btn.dataset;
+        if (d.action === 'register-assembly') registerAssembly(d.organism, d.assembly, btn);
+        if (d.action === 'rebuild-gff')       rebuildGff(d.organism, d.assembly, btn);
+        if (d.action === 'index-names')       indexTrackNames(d.trackId, d.organism, d.assembly, btn);
+    });
+    document.addEventListener('change', function (e) {
+        if (e.target.matches('input[name="trackSelect"]')) updateBulkButtons();
+    });
 
     // Wire up the GFF action modal submit button (shared by Rebuild + Index Names)
     document.getElementById('gffActionBtn')?.addEventListener('click', _gffActionSubmit);
