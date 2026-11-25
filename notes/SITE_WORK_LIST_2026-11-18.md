@@ -53,7 +53,11 @@ Order of work, and why:
       172.16 addresses). 12 scripts/tests have no CLI-only guard -- incl. strip_auto_public_access.php and
       adopt_archived_gene_sets.php -- and are safe from the web only because $argv is missing there (they die
       before writing): safe by accident. DONE 11-24: CLI-only line in all 15 (CLAUDE.md §8b) + smoke test
-      fails CI on a missing one (proven red). STILL TO DO: deny those paths in the guard template (docs/nginx/moop-security.conf
+      fails CI on a missing one (proven red). 11-25: DENY RULES WRITTEN (docs/nginx/moop-security.conf:
+      scripts/ tests/ vendor/ notes/ docs/ blocked, lib/ + includes/ except fasta_download_handler.php,
+      root CLAUDE.md README.md composer.* phpcompat.xml; tested in a private nginx) + setup-check now
+      compares the LIVE /etc/nginx/moop-sites/<site>/guard.conf. tests/jbrowse2/ deleted. LEFT: root
+      re-deploys the 3 guard.conf files (setup-check prints the command). Was: STILL TO DO: deny those paths in the guard template (docs/nginx/moop-security.conf
       -> scripts/nginx_site_guard.sh, root reload; setup-check probe for one of them) + a CLI guard line in every
       script. TALK (what of docs/ is meant to be public?), then **S-M (root)**
       11-24 REFRAMED: all 69 docs/ + 138 notes/ files (and CLAUDE.md) are in the PUBLIC GitHub repo srobb1/moop,
@@ -619,3 +623,15 @@ Planosphere
       (scripts/reset_password.php, scripts/spatial_atlas_from_endoatlas.php, setup-check.php); escapeHtml-style
       helpers in many JS files (36 JS names are defined in more than one file). Dead code was cleared 11-25
       (65 functions + js/modules/manage-registry.js), so what is left is all in use. **M-L**
+- [ ] **Co-orthologs: show the other genes** (Sofia 11-25: "if a gene is called a co-ortholog, other genes in
+      this data set are orthologs to the same human gene -- can we see those other genes?"). TODAY: the gene
+      page's naming list has a "Copies" statement ("One of 3 genes in this genome named after it (the others:
+      dd_Smed_v6_84813_0, ...)") -- PLAIN TEXT, IDs not links, capped at 10 ("and 11 more"; Smed max 22), and
+      it lists only genes NAMED after the human gene, not every gene OMA pairs with it ("OMA pairs 3 genes here
+      with it, 1 of them named by other evidence"). Data for the full set is already loaded: the gene_naming
+      identity accession (HGNC:...) for the named ones, and "OMA HOG orthologs (HUMAN)" annotations (33,295 in
+      Smed) for all OMA-paired ones. IDEA: make the Copies IDs links, and add "All N genes in this gene set
+      paired with human X" (a small list or a link to a search on that human accession, scoped to this gene
+      set). ⚠️ Wording: in OMA "co-ortholog" covers BOTH directions -- many:1 (several genes here, one human
+      gene: what Sofia means) and 1:many (one gene here, several human genes, e.g. "co-ortholog of ANO1 and
+      ANO2"). The page should say which, so the list makes sense. TALK (layout), then **S-M**

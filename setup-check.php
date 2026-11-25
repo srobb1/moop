@@ -794,6 +794,24 @@ if ($server_flavor === 'unknown') {
         pass("Execution guard deployed and current ($server_flavor)");
     }
 
+    // A site at its own domain's root has its own server block (conf.d/moop-sites.conf), and the
+    // guard nginx applies THERE is /etc/nginx/moop-sites/<site>/guard.conf -- not the default.d
+    // file compared above. Until 2026-11-25 nothing compared it, so a new rule in the template
+    // (the code/notes deny list) would never have been reported as missing from the live sites.
+    $site_guard = "/etc/nginx/moop-sites/$guard_site/guard.conf";
+    if ($server_flavor === 'nginx' && file_exists($site_guard)) {
+        $want = (string) shell_exec('bash ' . escapeshellarg("$base/scripts/nginx_site_guard.sh") . ' '
+                                    . escapeshellarg($guard_site) . ' ' . escapeshellarg($sc_prefix === '' ? '/' : $sc_prefix));
+        $strip = fn(string $t) => md5(preg_replace('/^[ \t]*(#.*)?\R/m', '', $t));
+        if ($want !== '' && $strip((string) @file_get_contents($site_guard)) === $strip($want)) {
+            pass("Site guard current ($site_guard)");
+        } else {
+            warn("Site guard differs from what this site needs ($site_guard)",
+                 "It may predate a rule that closes a hole. Re-deploy:\n" .
+                 "         sudo bash -c '$base/scripts/nginx_site_guard.sh $guard_site " . ($sc_prefix === '' ? '/' : $sc_prefix) . " > $site_guard' && $reload");
+        }
+    }
+
     // Does it actually WORK? Comparing the file proves nothing about what nginx does with it (a
     // guard that sorted after php.conf compared "current" while .php ran). Put a .php that would
     // print a random token into images/ (served AND web-writable), ask for it over HTTP, delete it.
