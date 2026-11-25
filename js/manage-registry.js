@@ -5,27 +5,42 @@
 
 let registryData = null;
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+// One setup, run once: load the data, render, and bind every control.
+// (Shared by Manage Registry and Manage JS Registry -- both templates use the same ids.)
+function initRegistryPage() {
     const dataElement = document.getElementById('registryData');
     if (dataElement) {
-        registryData = JSON.parse(dataElement.textContent);
-        renderRegistry();
+        try {
+            registryData = JSON.parse(dataElement.textContent);
+            renderRegistry();
+        } catch (e) {
+            console.error('Error parsing JSON or rendering:', e);
+        }
     }
-    
-    // Attach event listeners
-    const toggleAllBtn = document.getElementById('toggleAllFilesBtn');
-    if (toggleAllBtn) {
-        toggleAllBtn.addEventListener('click', toggleAllFiles);
-    }
-    
+
+    const bind = (id, evt, fn) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener(evt, fn);
+    };
+    bind('generateBtn', 'click', generateRegistry);
+    bind('downloadRegistryBtn', 'click', downloadRegistry);
+    bind('clearFiltersBtn', 'click', clearSearch);
+    // 'input' rather than the old onkeyup: also catches paste and the clear-x
+    bind('searchInput', 'input', filterRegistry);
+    bind('categoryFilter', 'change', filterRegistry);
+    bind('typeFilter', 'change', filterRegistry);
+    document.querySelectorAll('input[name="searchMode"]').forEach(radio => {
+        radio.addEventListener('change', filterRegistry);
+    });
+    bind('toggleAllFilesBtn', 'click', toggleAllFiles);
+
     const unusedHeader = document.getElementById('unusedSectionHeader');
     if (unusedHeader) {
         unusedHeader.addEventListener('click', function() {
             toggleUnusedSection(this);
         });
     }
-});
+}
 
 /**
  * Render registry from JSON data
@@ -656,27 +671,9 @@ function htmlEscape(text) {
     return div.innerHTML;
 }
 
-// Initialize registry on page load or immediately if DOM is ready
+// Run setup once, whether or not the DOM is already parsed
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        const dataElement = document.getElementById('registryData');
-        if (dataElement) {
-            try {
-                registryData = JSON.parse(dataElement.textContent);
-                renderRegistry();
-            } catch (e) {
-                console.error('Error parsing JSON or rendering:', e);
-            }
-        }
-    });
+    document.addEventListener('DOMContentLoaded', initRegistryPage);
 } else {
-    const dataElement = document.getElementById('registryData');
-    if (dataElement) {
-        try {
-            registryData = JSON.parse(dataElement.textContent);
-            renderRegistry();
-        } catch (e) {
-            console.error('Error parsing JSON or rendering:', e);
-        }
-    }
+    initRegistryPage();
 }

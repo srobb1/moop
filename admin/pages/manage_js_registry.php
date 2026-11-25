@@ -30,12 +30,12 @@ $statusMessage = $statusMessage ?? '';
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <button class="btn btn-primary w-100" onclick="generateRegistry()" id="generateBtn" data-registry-type="js">
+                    <button class="btn btn-primary w-100" id="generateBtn" data-registry-type="js">
                         <i class="fa fa-sync"></i> Generate/Update Registry
                     </button>
                 </div>
                 <div class="col-md-6">
-                    <button class="btn btn-info w-100" onclick="downloadRegistry()" title="Download as JSON">
+                    <button class="btn btn-info w-100" id="downloadRegistryBtn" title="Download as JSON">
                         <i class="fa fa-download"></i> Export as JSON
                     </button>
                 </div>
@@ -105,14 +105,13 @@ $statusMessage = $statusMessage ?? '';
                     id="searchInput" 
                     class="form-control" 
                     placeholder="Search functions, code, or comments..."
-                    onkeyup="filterRegistry()"
                 >
             </div>
             
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Filter by Category:</label>
-                    <select id="categoryFilter" class="form-select form-select-sm" onchange="filterRegistry()">
+                    <select id="categoryFilter" class="form-select form-select-sm">
                         <option value="">All Categories</option>
                         <option value="ui-dom">🎨 UI/DOM</option>
                         <option value="event-handling">⚡ Event Handling</option>
@@ -128,7 +127,7 @@ $statusMessage = $statusMessage ?? '';
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Filter by Type:</label>
-                    <select id="typeFilter" class="form-select form-select-sm" onchange="filterRegistry()">
+                    <select id="typeFilter" class="form-select form-select-sm">
                         <option value="">All Types</option>
                         <option value="dom-manipulation">DOM Manipulation</option>
                         <option value="asynchronous">Asynchronous/Async</option>
@@ -146,26 +145,26 @@ $statusMessage = $statusMessage ?? '';
                 <label class="form-label">Search in:</label>
                 <div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="searchMode" id="searchAll" value="all" checked onchange="filterRegistry()">
+                        <input class="form-check-input" type="radio" name="searchMode" id="searchAll" value="all" checked>
                         <label class="form-check-label" for="searchAll">All</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="searchMode" id="searchName" value="name" onchange="filterRegistry()">
+                        <input class="form-check-input" type="radio" name="searchMode" id="searchName" value="name">
                         <label class="form-check-label" for="searchName">Function Name</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="searchMode" id="searchCode" value="code" onchange="filterRegistry()">
+                        <input class="form-check-input" type="radio" name="searchMode" id="searchCode" value="code">
                         <label class="form-check-label" for="searchCode">Code</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="searchMode" id="searchComment" value="comment" onchange="filterRegistry()">
+                        <input class="form-check-input" type="radio" name="searchMode" id="searchComment" value="comment">
                         <label class="form-check-label" for="searchComment">Comments</label>
                     </div>
                 </div>
             </div>
             
             <div class="mb-0">
-                <button class="btn btn-sm btn-secondary" onclick="clearSearch()">
+                <button class="btn btn-sm btn-secondary" id="clearFiltersBtn">
                     <i class="fa fa-times"></i> Clear All Filters
                 </button>
             </div>
