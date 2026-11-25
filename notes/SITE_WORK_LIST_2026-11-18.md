@@ -228,7 +228,18 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
-- [ ] **Term page redesign: two columns (Sofia 11-25).** Genes (gene-set table + gene list) LEFT, term boxes (name/definition,
+- [ ] **Term page redesign vs ANATOMY terms (PLANA) (Sofia 11-25).** The two-column layout + full-width header
+      (11-25) was designed around GO genes. Anatomy terms have little in the data column (records + images) and a long
+      term column (Parts and relationships), and Sofia found the old Jump-to sidebar good there. Review PLANA term
+      pages (e.g. eye PLANA:0000036, a big region like head) and decide: sidebar back for anatomy only, different
+      column split, or something else. **M**
+- [x] DONE 11-25. **Term page follow-ups (Sofia 11-25):** gene list's Data Exporter / Download as matching buttons;
+      STAGE terms find their expression records (curation.stage_id -- Stage 3 said 0, has 85; lib/anatomy_expression.php
+      matches term_id OR stage_id, the two id sets never overlap); Description moved to the left column with "Jump to"
+      In situ data (row count) / Sequences; amber "Expand column" (left column full width, remembered) replaces
+      "Open as its own page"; Expression records above Description; anatomy chips (.tp-term) in the 17 written PLANA
+      pages' tables (site data). Open: move the Images card up too? add a smoke test for the stage match.
+- [x] DONE 11-25. **Term page redesign: two columns (Sofia 11-25).** Genes (gene-set table + gene list) LEFT, term boxes (name/definition,
       Where it sits, Parts and relationships, Description) RIGHT; drop the Jump-to navigator. Claude's view 11-25: works -- see that
       session's answer (wide screens only; stacks on phones with the term first; full width when a term has no genes). Mock up
       in the live page first (feedback_visual_mockups_in_browser). **M**

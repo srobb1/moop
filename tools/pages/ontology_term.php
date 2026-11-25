@@ -1,9 +1,11 @@
 <?php
 /**
- * Ontology term page -- content file (controller: tools/ontology_term.php). Laid out like the gene
- * page: the same section sidebar (js/modules/parent-nav.js lists every [data-nav-label] card).
+ * Ontology term page -- content file (controller: tools/ontology_term.php). Two columns on wide
+ * screens (css/ontology-browser.css .ob-cols): description / genes / records / images left, the term's own boxes
+ * right; one column, term first, on narrow screens or when the term has no data cards.
+ * The card ids (#pnav-genes ...) are kept: other pages link to them.
  * Variables: $term (null = not found), $prefix, $ontology_name, $release, $view (paths, parents,
- * kinds, outgoing, incoming, written), $rels, $written_html, $records, $records_elsewhere, $links,
+ * kinds, outgoing, incoming, written), $rels, $written_html, $records, $records_elsewhere, $is_stage, $written_jumps, $links,
  * $gene_rows (GO: one row per visible gene set, else null), $genes_missing, $gene_download.
  * $scope: the organism / assembly / gene set the table is limited to (moop_ob_scope(); [] = all).
  * Genes are opened or downloaded ONE gene set at a time, by design: an all-organisms export of a
@@ -33,29 +35,14 @@ $rows = function (array $list) use ($prefix): string {
   </div>
 </div>
 <?php return; endif; ?>
+<?php
+// The term's header (name, ID, definition, synonyms) spans the page. Below it, two columns on wide
+// screens: the term's description and data (genes, records, images) left, the term's other boxes right. The term
+// column comes first in the page, so phones (one column) show it first.
+$has_data = $written_html !== '' || $gene_rows !== null || $records !== null || !empty($term_images) || $records_elsewhere !== '';
+?>
 <div class="page_container ob-term-page">
-    <div class="pnav-jumpbar">
-      <button class="pnav-jb-btn" id="pnavJbBtn" type="button" aria-expanded="false" aria-controls="pnavJbDd">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 4h12v1.6H2zM2 7.2h12v1.6H2zM2 10.4h8V12H2z"/></svg>
-        <?= t('Jump to') . "\n" ?>
-        <svg class="pnav-jb-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
-      </button>
-      <span class="pnav-jb-current" id="pnavJbCurrent"><?= htmlspecialchars($term['label']) ?></span>
-      <div class="pnav-jb-dd" id="pnavJbDd"></div>
-    </div>
-    <div class="pnav-layout">
-      <aside class="pnav-side" aria-label="<?= t('Jump to') ?>">
-        <div class="pnav-side-head">
-          <span class="pnav-side-title"><?= t('Jump to') ?></span>
-          <button class="pnav-toggle" id="pnavToggle" type="button" aria-label="<?= t('Collapse navigation') ?>" aria-expanded="true" title="<?= t('Collapse (content goes full width)') ?>">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
-          </button>
-        </div>
-        <div class="pnav-scroll" id="pnavToc"></div>
-      </aside>
-      <div class="pnav-main">
-
-    <div class="card shadow-sm mb-4 ob-term-head" id="pnav-overview" data-nav-label="<?= htmlspecialchars($term['label']) ?>" data-nav-tag="<?= htmlspecialchars($term['id']) ?>">
+    <div class="card shadow-sm mb-4 ob-term-head" id="pnav-overview">
       <div class="card-header tool-header text-white">
         <h1 class="ob-term-title"><?= htmlspecialchars($term['label']) ?></h1>
         <div class="ob-term-meta">
@@ -77,14 +64,28 @@ $rows = function (array $list) use ($prefix): string {
         <dl class="ob-syn">
           <?php foreach ($term['synonyms'] as $kind => $list): ?>
             <dt><?= htmlspecialchars(t_plain($kind)) ?></dt>
-            <dd><?php foreach ($list as $s): ?><span class="ob-chip"><?= htmlspecialchars($s) ?></span><?php endforeach; ?></dd>
+            <dd class="ob-syn-dd"><span class="ob-syn-list"><?= implode('; ', array_map(fn($s) => '<span class="ob-syn-item">' . htmlspecialchars($s) . '</span>', $list)) ?></span></dd>
           <?php endforeach; ?>
         </dl>
         <?php endif; ?>
       </div>
     </div>
 
-    <div class="card shadow-sm mb-4" id="pnav-lineage" data-nav-label="<?= t('Where it sits') ?>">
+  <?php
+  // "Expand column" (wide screens only, css): the left column takes the full width; the right column's
+  // boxes move below it. Sits in the Description card's header, or in a bar when there is none. js/ontology-term.js
+  $widen_btn = '<button type="button" class="ob-widen" id="obWiden" aria-pressed="false" aria-controls="obCols"'
+      . ' data-wide="' . t('Back to two columns') . '" data-narrow="' . t('Expand column') . '"'
+      . ' title="' . t('Give the left column the full width; the boxes on the right move below it.') . '">'
+      . '<i class="fa fa-expand" aria-hidden="true"></i> <span class="ob-widen-label">' . t('Expand column') . '</span></button>';
+  ?>
+  <?php if ($has_data && $written_html === ''): ?>
+  <div class="ob-widen-bar"><?= $widen_btn ?></div>
+  <?php endif; ?>
+  <div class="ob-cols<?= $has_data ? '' : ' ob-cols-solo' ?>" id="obCols">
+    <div class="ob-col-term">
+
+    <div class="card shadow-sm mb-4" id="pnav-lineage">
       <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Where it sits') ?></h2></div>
       <div class="card-body">
         <?php if ($view['paths']): ?>
@@ -110,7 +111,7 @@ $rows = function (array $list) use ($prefix): string {
     </div>
 
     <?php if ($view['outgoing'] || $view['incoming']): ?>
-    <div class="card shadow-sm mb-4" id="pnav-relations" data-nav-label="<?= t('Parts and relationships') ?>">
+    <div class="card shadow-sm mb-4" id="pnav-relations">
       <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Parts and relationships') ?></h2></div>
       <div class="card-body">
         <?php $__first = true; foreach ($view['outgoing'] as $label => $list): ?>
@@ -125,11 +126,67 @@ $rows = function (array $list) use ($prefix): string {
     </div>
     <?php endif; ?>
 
+    <?php if ($links): ?>
+    <div class="card shadow-sm mb-4" id="pnav-links">
+      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Links') ?></h2></div>
+      <div class="card-body">
+        <?php foreach ($links as $name => $url): ?>
+          <a class="btn btn-sm ot-action-outline me-2 mb-1" href="<?= htmlspecialchars($url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($name) ?></a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    </div>
+    <?php if ($has_data): ?>
+    <div class="ob-col-data">
+
+    <?php // Expression records first: one line and a button, which a long description would otherwise bury. ?>
+    <?php if ($records !== null): ?>
+    <div class="card shadow-sm mb-4" id="pnav-records">
+      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Expression records') ?></h2></div>
+      <div class="card-body">
+        <?php if ($records['total'] > 0): ?>
+          <?php if ($is_stage): ?>
+          <p class="mb-2"><?= t_markup('%s published expression records at %s or any stage within it.', '<strong>' . number_format($records['total']) . '</strong>', htmlspecialchars($term['label'])) ?></p>
+          <?php else: ?>
+          <p class="mb-2"><?= t_markup('%s published expression records in %s or any of its parts.', '<strong>' . number_format($records['total']) . '</strong>', htmlspecialchars($term['label'])) ?></p>
+          <?php endif; ?>
+          <a class="btn btn-sm ot-action" href="<?= htmlspecialchars($records['url']) ?>"><?= t('See them in Expression by Anatomy') ?></a>
+        <?php else: ?>
+          <p class="text-muted mb-0"><?= t('No published expression records for this term or its parts.') ?></p>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($records === null && $records_elsewhere !== ''): ?>
+    <div class="card shadow-sm mb-4" id="pnav-records">
+      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Expression records') ?></h2></div>
+      <div class="card-body">
+        <p class="mb-2"><?= t('Published expression records for %s and its parts are searched on SIMRbase.', $term['label']) ?></p>
+        <a class="btn btn-sm ot-action" href="<?= htmlspecialchars($records_elsewhere) ?>"><?= t('See the expression records') ?></a>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <?php // A curator's written description of the term. ?>
     <?php if ($written_html !== ''): ?>
-    <div class="card shadow-sm mb-4" id="pnav-description" data-nav-label="<?= t('Description') ?>">
-      <div class="card-header ob-card-head d-flex align-items-center">
+    <div class="card shadow-sm mb-4" id="pnav-description">
+      <div class="card-header ob-card-head d-flex flex-wrap align-items-center gap-2">
         <h2 class="h5 mb-0"><?= t('Description') ?></h2>
-        <a class="ms-auto small" href="<?= htmlspecialchars(moop_page_url($view['written']['slug'])) ?>"><?= t('Open as its own page') ?></a>
+        <?php if ($written_jumps): ?>
+        <nav class="ob-jumps ms-2" aria-label="<?= t('Jump to a section of the description') ?>">
+          <span class="ob-jumps-lead"><?= t('Jump to') ?></span>
+          <?php if (isset($written_jumps['ob-insitu'])): $__c = $written_jumps['ob-insitu']['count'] ?? null; ?>
+          <a class="ob-jump" href="#ob-insitu"><i class="fa fa-microscope" aria-hidden="true"></i> <?= t('In situ data') ?><?php if ($__c): ?> <span class="ob-jump-count" title="<?= t('%d rows in the in situ table', $__c) ?>"><?= number_format($__c) ?></span><?php endif; ?></a>
+          <?php endif; ?>
+          <?php if (isset($written_jumps['ob-seqs'])): ?>
+          <a class="ob-jump" href="#ob-seqs"><i class="fa fa-dna" aria-hidden="true"></i> <?= t('Sequences') ?></a>
+          <?php endif; ?>
+        </nav>
+        <?php endif; ?>
+        <span class="ms-auto ob-widen-slot"><?= $widen_btn ?></span>
       </div>
       <div class="card-body content-page-body ob-written"><?= $written_html ?></div>
     </div>
@@ -137,7 +194,7 @@ $rows = function (array $list) use ($prefix): string {
 
     <?php if ($gene_rows !== null): ?>
     <?php $_orgs = count(array_unique(array_column($gene_rows, 'organism'))); ?>
-    <div class="card shadow-sm mb-4" id="pnav-genes" data-nav-label="<?= t('Genes') ?>">
+    <div class="card shadow-sm mb-4" id="pnav-genes">
       <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Genes') ?> <span class="ob-hcount">(<?= number_format(count($gene_rows)) ?>)</span></h2></div>
       <div class="card-body">
         <?php if (!empty($scope)): ?>
@@ -197,7 +254,7 @@ $rows = function (array $list) use ($prefix): string {
             <tbody>
             <?php foreach ($gene_rows as $g): ?>
               <tr<?= $attrs([
-                  'organism' => $g['organism'], 'assembly' => $g['assembly'], 'gene-set' => $g['gene_set'],
+                  'organism' => $g['organism'], 'assembly' => $g['assembly'], 'gene-set' => $g['gene_set'], 'open' => $g['open'] ? 1 : 0,
                   'label' => str_replace('_', ' ', $g['organism']) . ' › ' . ($g['genome_name'] !== '' ? $g['genome_name'] : $g['assembly']) . ' › ' . $g['gene_set']]) ?>>
                 <td><em><?= htmlspecialchars(str_replace('_', ' ', $g['organism'])) ?></em></td>
                 <td><?= htmlspecialchars($g['genome_name'] !== '' ? $g['genome_name'] . ' (' . $g['assembly'] . ')' : $g['assembly']) ?></td>
@@ -209,12 +266,13 @@ $rows = function (array $list) use ($prefix): string {
             </tbody>
           </table>
           <!-- One gene set's genes, opened from its number (js/ontology-term.js, api/go_term_genes.php).
-               Opens by itself when the table has a single gene set. -->
+               Opens by itself for the gene set a gene page linked from (open_gene_set), or when the
+               table has a single gene set. -->
           <div class="ob-gene-list mt-3" id="obGeneList" hidden<?= $attrs([
                    'api' => moop_url('api/go_term_genes.php'), 'term' => $term['id'],
                    'gene-url' => moop_url('tools/parent.php'), 'term-url' => moop_url('tools/ontology_term.php')]) ?>>
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-              <h3 class="h6 mb-0 me-auto" id="obGeneListTitle"></h3>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2 ob-gl-head">
+              <h3 class="mb-0 me-auto ob-gl-title" id="obGeneListTitle"></h3>
               <span id="obGeneListActions" class="d-inline-flex align-items-center gap-2"></span>
               <button type="button" class="btn-close" id="obGeneListClose" aria-label="<?= t('Close the gene list') ?>"></button>
             </div>
@@ -233,22 +291,8 @@ $rows = function (array $list) use ($prefix): string {
     </div>
     <?php endif; ?>
 
-    <?php if ($records !== null): ?>
-    <div class="card shadow-sm mb-4" id="pnav-records" data-nav-label="<?= t('Expression records') ?>">
-      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Expression records') ?></h2></div>
-      <div class="card-body">
-        <?php if ($records['total'] > 0): ?>
-          <p class="mb-2"><?= t_markup('%s published expression records in %s or any of its parts.', '<strong>' . number_format($records['total']) . '</strong>', htmlspecialchars($term['label'])) ?></p>
-          <a class="btn btn-sm ot-action" href="<?= htmlspecialchars($records['url']) ?>"><?= t('See them in Expression by Anatomy') ?></a>
-        <?php else: ?>
-          <p class="text-muted mb-0"><?= t('No published expression records for this term or its parts.') ?></p>
-        <?php endif; ?>
-      </div>
-    </div>
-    <?php endif; ?>
-
     <?php if (!empty($term_images)): ?>
-    <div class="card shadow-sm mb-4" id="pnav-term-images" data-nav-label="<?= t('Images') ?>">
+    <div class="card shadow-sm mb-4" id="pnav-term-images">
       <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Images') ?></h2></div>
       <div class="card-body">
         <p class="mb-2"><?= t_markup('%s images of %s or any of its parts.', '<strong>' . number_format($term_images['total']) . '</strong>', htmlspecialchars($term['label'])) ?></p>
@@ -265,27 +309,8 @@ $rows = function (array $list) use ($prefix): string {
     </div>
     <?php endif; ?>
 
-    <?php if ($records === null && $records_elsewhere !== ''): ?>
-    <div class="card shadow-sm mb-4" id="pnav-records" data-nav-label="<?= t('Expression records') ?>">
-      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Expression records') ?></h2></div>
-      <div class="card-body">
-        <p class="mb-2"><?= t('Published expression records for %s and its parts are searched on SIMRbase.', $term['label']) ?></p>
-        <a class="btn btn-sm ot-action" href="<?= htmlspecialchars($records_elsewhere) ?>"><?= t('See the expression records') ?></a>
-      </div>
+
     </div>
     <?php endif; ?>
-
-    <?php if ($links): ?>
-    <div class="card shadow-sm mb-4" id="pnav-links" data-nav-label="<?= t('Links') ?>">
-      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Links') ?></h2></div>
-      <div class="card-body">
-        <?php foreach ($links as $name => $url): ?>
-          <a class="btn btn-sm ot-action-outline me-2 mb-1" href="<?= htmlspecialchars($url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($name) ?></a>
-        <?php endforeach; ?>
-      </div>
-    </div>
-    <?php endif; ?>
-
-      </div>
-    </div>
+  </div>
 </div>

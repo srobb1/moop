@@ -10,6 +10,62 @@
  * a new tab / middle click. With a single gene set the list opens by itself. The switch reloads
  * an open list. Names and descriptions are data: built with textContent, never as HTML.
  */
+// "Expand column": the left column takes the full width and the right column's boxes move
+// below it (css .ob-cols.ob-wide, wide screens only). Remembered for the next term page.
+(function () {
+  "use strict";
+  var btn = document.getElementById("obWiden"), cols = document.getElementById("obCols");
+  if (!btn || !cols) return;
+  var KEY = "moop.termPageWide";
+  function set(wide, save) {
+    cols.classList.toggle("ob-wide", wide);
+    btn.setAttribute("aria-pressed", wide ? "true" : "false");
+    btn.querySelector(".ob-widen-label").textContent = wide ? btn.dataset.wide : btn.dataset.narrow;
+    var icon = btn.querySelector(".fa");
+    if (icon) icon.className = wide ? "fa fa-compress" : "fa fa-expand";
+    if (save) { try { localStorage.setItem(KEY, wide ? "1" : "0"); } catch (e) { /* private mode: not remembered */ } }
+  }
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) { /* ignore */ }
+  if (saved === "1") set(true, false);
+  btn.addEventListener("click", function () { set(!cols.classList.contains("ob-wide"), true); });
+})();
+
+// Synonyms: each kind (Exact, Narrow, ...) on one line; "+N more" -- N = the synonyms cut off -- expands
+// it, "Show less" folds it back. Runs on every term page, before the Genes code (GO only).
+(function () {
+  "use strict";
+  var T = function (s) { return typeof moopT === "function" ? moopT(s) : s; };
+  var rows = [];
+  // How many synonyms do not fit wholly on the folded line.
+  function hidden(dd) {
+    var box = dd.querySelector(".ob-syn-list").getBoundingClientRect();
+    return Array.prototype.filter.call(dd.querySelectorAll(".ob-syn-item"), function (it) {
+      return it.getBoundingClientRect().right > box.right + 0.5;
+    }).length;
+  }
+  function update(r) {
+    if (r.open) { r.dd.classList.remove("ob-syn-clamp"); r.btn.hidden = false; r.btn.textContent = T("Show less"); return; }
+    r.dd.classList.add("ob-syn-clamp");
+    var n = hidden(r.dd);
+    r.btn.hidden = n === 0;
+    r.btn.textContent = T("+%s more").replace("%s", n.toLocaleString());
+  }
+  document.querySelectorAll(".ob-syn-dd").forEach(function (dd) {
+    if (dd.querySelectorAll(".ob-syn-item").length < 2) return;
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "ob-syn-more";
+    var r = { dd: dd, btn: btn, open: false };
+    btn.addEventListener("click", function () { r.open = !r.open; btn.setAttribute("aria-expanded", r.open); update(r); });
+    btn.setAttribute("aria-expanded", "false");
+    dd.appendChild(btn);
+    rows.push(r); update(r);
+  });
+  // The count depends on the line width: recount when the window is resized.
+  var timer = null;
+  window.addEventListener("resize", function () { clearTimeout(timer); timer = setTimeout(function () { rows.forEach(update); }, 150); });
+})();
+
 (function () {
   "use strict";
   var table = document.getElementById("obGenes");
@@ -54,7 +110,9 @@
 
   function openList(tr) {
     if (!panel || !tr) return;
+    if (openRow) openRow.classList.remove("ob-open");
     openRow = tr;
+    tr.classList.add("ob-open");      // marks which row the list below belongs to
     var mine = ++request;
     var cell = rowCell(tr);
     var link = cell && cell.querySelector("a.ob-genes-open");
@@ -62,13 +120,19 @@
     panel.hidden = false;
     title.textContent = tr.dataset.label;
     actions.textContent = "";
+    // Two matching buttons: the exporter (main action, solid) and the TSV download (outlined).
     if (link) {
-      var ex = el("a", "small", T("Open in the Data Exporter")); ex.href = link.href; actions.appendChild(ex);
+      var ex = el("a", "ob-gl-btn ob-gl-btn-main");
+      ex.href = link.href;
+      ex.appendChild(el("i", "fa fa-table")).setAttribute("aria-hidden", "true");
+      ex.appendChild(document.createTextNode(T("Open in the Data Exporter")));
+      actions.appendChild(ex);
     }
     if (form) {
       var f = form.cloneNode(true);
-      var b = f.querySelector("button"); b.className = "btn btn-sm btn-outline-secondary py-0";
-      b.appendChild(document.createTextNode(" " + T("Download (TSV)")));
+      f.className = "ob-gl-form";
+      var b = f.querySelector("button"); b.className = "ob-gl-btn ob-gl-btn-alt";
+      b.appendChild(document.createTextNode(T("Download (TSV)")));
       actions.appendChild(f);
     }
     if (listDt) { listDt.destroy(); listDt = null; }
@@ -87,7 +151,8 @@
   function drawList(tr, data) {
     body.textContent = "";
     var n = data.total || 0;
-    title.textContent = tr.dataset.label + " — " + (n === 1 ? T("1 gene") : T("%s genes").replace("%s", fmt(n)));
+    title.textContent = tr.dataset.label + " ";
+    title.appendChild(el("span", "ob-gl-count", n === 1 ? T("1 gene") : T("%s genes").replace("%s", fmt(n))));
     var t = el("table", "table table-sm table-hover align-middle w-100 ob-gene-list-table");
     var head = el("thead"), hr = el("tr");
     [T("Gene"), T("Name"), T("Description"), subOn() ? T("GO terms that matched") : T("GO term")].forEach(function (h) { hr.appendChild(el("th", "", h)); });
@@ -128,7 +193,7 @@
       panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
     document.getElementById("obGeneListClose").addEventListener("click", function () {
-      panel.hidden = true; openRow = null; request++;
+      panel.hidden = true; if (openRow) openRow.classList.remove("ob-open"); openRow = null; request++;
       if (listDt) { listDt.destroy(); listDt = null; } body.textContent = "";
     });
   }
@@ -136,7 +201,10 @@
   if (sw) sw.addEventListener("change", function () { applySwitch(); if (openRow) openList(openRow); });
   applySwitch();
 
-  // A single gene set: its genes are what the visitor came for -- show them straight away.
+  // Show a gene list straight away when we know which one the visitor came for: the gene set a gene
+  // page linked from (data-open), else the only gene set in the table.
   var rowsAll = table.querySelectorAll("tbody tr");
-  if (panel && rowsAll.length === 1) openList(rowsAll[0]);
+  var linked = table.querySelector('tbody tr[data-open="1"]');
+  if (panel && linked) openList(linked);
+  else if (panel && rowsAll.length === 1) openList(rowsAll[0]);
 })();

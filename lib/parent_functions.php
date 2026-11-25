@@ -566,9 +566,13 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
             $acc = trim((string) $row['annotation_accession']);
             if (preg_match('/^GO:\d{7}$/', $acc) && moop_go_term_page_available()) {
                 // Narrowed to this gene's organism (Sofia, 2026-11-25); the term page offers the way out to all.
+                // open_*: this gene's own gene set, whose gene list the term page opens; the organism's
+                // other assemblies / gene sets stay listed in its table.
                 $term_org = (string) ($link_ctx['organism'] ?? $organism);
                 $term_url = moop_url('tools/ontology_term.php') . '?' . http_build_query(['o' => 'GO', 'id' => $acc]
-                          + ($term_org !== '' ? ['organism' => $term_org] : []));
+                          + ($term_org !== '' ? ['organism' => $term_org] : [])
+                          + (($link_ctx['assembly'] ?? '') !== '' && ($link_ctx['gene_set'] ?? '') !== ''
+                             ? ['open_assembly' => $link_ctx['assembly'], 'open_gene_set' => $link_ctx['gene_set']] : []));
                 $hit_id_cell = '<a href="' . htmlspecialchars($term_url) . '" title="' . t('Open this GO term on this site') . '">' . $hit_id . '</a>'
                              . ' <a href="' . htmlspecialchars($hit_id_link) . '" target="_blank" rel="noopener" class="text-muted"'
                              . ' title="' . t('Open this GO term in AmiGO') . '" aria-label="' . t('Open this GO term in AmiGO') . '">'

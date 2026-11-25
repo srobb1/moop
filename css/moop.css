@@ -1181,5 +1181,13 @@ footer .footer-meta {
     background: rgba(var(--moop-main-rgb), 0.1); color: var(--moop-main-dark); text-decoration: none;
 }
 .tp-page .tp-stage:hover { background: rgba(var(--moop-main-rgb), 0.2); }
+/* Anatomy terms in the same tables (Expression Pattern / Tissue/Pattern): chips too, outlined so they
+   read apart from the filled stage chips. Long names wrap inside the chip. */
+.tp-page .tp-terms { min-width: 10rem; }
+.tp-page .tp-term {
+    display: inline-block; padding: 0 7px; margin: 1px 0; border-radius: 9px; font-size: 0.75rem; line-height: 1.5;
+    border: 1px solid rgba(var(--moop-main-rgb), 0.35); background: #fff; color: var(--moop-main-dark); text-decoration: none;
+}
+.tp-page .tp-term:hover { background: rgba(var(--moop-main-rgb), 0.1); border-color: rgba(var(--moop-main-rgb), 0.6); }
 .tp-page img[src$="excel-xls-icon-2.png"] { width: 56px; height: auto; border: 0; }
 .tp-page .tp-seqs .small { display: block; margin-top: 0.35rem; overflow-wrap: anywhere; }

@@ -269,8 +269,11 @@ function moop_page_search(string $organism, ?array $term_ids, array $filters = [
     $where = []; $params = [];
     if ($term_ids !== null) {
         $term_ids = array_values(array_unique(array_merge($term_ids, moop_page_replaced_into($term_ids))));
-        $where[]  = 'c.term_id IN (' . implode(',', array_fill(0, count($term_ids), '?')) . ')';
-        $params   = $term_ids;
+        // A term matches a record's anatomy term OR its stage: stage terms (Stage 3, embryo stage) are
+        // filed in stage_id, never term_id (the two id sets do not overlap), so this adds no anatomy hits.
+        $ph       = implode(',', array_fill(0, count($term_ids), '?'));
+        $where[]  = "(c.term_id IN ($ph) OR c.stage_id IN ($ph))";
+        $params   = array_merge($term_ids, $term_ids);
     }
     if (!empty($filters['pmid'])) { $where[] = 'c.pmid = ?'; $params[] = (string) $filters['pmid']; }
     foreach (['evidence' => 'c.evidence_id', 'stage' => 'c.stage_id'] as $f => $col) {
@@ -569,8 +572,10 @@ function moop_page_spec_where(array $spec): array {
     $where = []; $params = [];
     if ($spec['term_ids'] !== null) {
         $ids = array_values(array_unique(array_merge($spec['term_ids'], moop_page_replaced_into($spec['term_ids']))));
-        $where[] = 'c.term_id IN (' . implode(',', array_fill(0, max(1, count($ids)), '?')) . ')';
-        $params  = $ids ?: [''];
+        // The term or its stage, as in moop_page_search(): stage terms live in stage_id only.
+        $ph      = implode(',', array_fill(0, max(1, count($ids)), '?'));
+        $where[] = "(c.term_id IN ($ph) OR c.stage_id IN ($ph))";
+        $params  = array_merge($ids ?: [''], $ids ?: ['']);
     }
     if ($spec['accessions'] !== null) {
         $where[] = 'c.accession_lc IN (' . implode(',', array_fill(0, max(1, count($spec['accessions'])), '?')) . ')';

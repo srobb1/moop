@@ -28,6 +28,7 @@ $rels = moop_ob_relations($prefix);
 
 // The written page, in the visitor's language when it has one.
 $written_html = '';
+$written_jumps = [];   // anchor => ['label', 'count'?], below
 if ($view['written']) {
     $lang = moop_current_lang();
     $body = trim((string) ($view['written']['body'][$lang] ?? '')) !== '' ? $view['written']['body'][$lang] : (string) ($view['written']['body']['en'] ?? '');
@@ -37,11 +38,26 @@ if ($view['written']) {
     $root = moop_url_base() . '/';
     $written_html = preg_replace_callback('/\b(src|href)="(?![a-z][a-z0-9+.-]*:|\/|#)([^"]*)"/i',
         fn($m) => $m[1] . '="' . $root . $m[2] . '"', $written_html);
+    // "Jump to" links in the Description header for the long sections the ported Planosphere pages
+    // carry (stage and tissue pages): the in situ gene table (with its gene count) and the sequences.
+    // Matched by heading text -- these pages are site data written to one pattern (metadata/pages).
+    foreach (['ob-insitu' => 'In Situ Hybridization Data', 'ob-seqs' => 'Sequences'] as $anchor => $heading) {
+        $n = 0;
+        $written_html = preg_replace('#<h2>\s*' . preg_quote($heading, '#') . '\s*</h2>#i', '<h2 id="' . $anchor . '">' . $heading . '</h2>', $written_html, 1, $n);
+        if ($n) $written_jumps[$anchor] = ['label' => $heading];
+    }
+    if (isset($written_jumps['ob-insitu']) && preg_match('#id="ob-insitu".*?<table[^>]*tp-genes.*?</table>#s', $written_html, $tm)) {
+        $written_jumps['ob-insitu']['count'] = preg_match_all('#<tr>\s*<td#', $tm[0]);
+    }
 }
 
 // Expression records (curated PAGE data) on THIS site for an anatomy term: the term and
-// everything in it (is a + part of), like the Anatomical Expression Search's default.
+// everything in it (is a + part of), like the Anatomical Expression Search's default. A life-cycle
+// stage (Stage 3, embryo stage) matches the records' stage instead (lib/anatomy_expression.php),
+// so its card says "at" rather than "in ... or any of its parts".
 $records = null;
+$is_stage = (moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy'
+    && in_array($term['id'], moop_ontology_expand($prefix, 'UBERON:0000105', []), true);   // UBERON:0000105 = life cycle stage
 if ((moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy') {
     $org = moop_ob_records_organism($prefix);
     if ($org !== '') {
@@ -97,7 +113,12 @@ if ($prefix === 'GO') {
     $gene_rows = moop_go_counts_by_gene_set($term['id'], moop_ob_scope());
     $genes_missing = moop_ob_gene_counts_missing();
     $mart = moop_url('tools/moopmart.php');
+    // The gene set to open on arrival (a gene page's GO link names its own). Only a row already in
+    // the table can match, so this can never show a gene set the visitor may not see.
+    $open_asm = (string) ($_GET['open_assembly'] ?? '');
+    $open_gs  = (string) ($_GET['open_gene_set'] ?? '');
     foreach ($gene_rows as &$g) {
+        $g['open'] = $open_gs !== '' && $g['assembly'] === $open_asm && $g['gene_set'] === $open_gs;
         $g['url'] = $mart . '?' . http_build_query(['organism' => $g['organism'], 'assembly' => $g['assembly'],
                      'gene_set' => $g['gene_set'], 'annotation' => $term['id'], 'annotation_sub' => 1,
                      'annotation_columns' => [MOOP_GO_ANNOTATION_TYPE]]);
@@ -130,12 +151,12 @@ $obo = preg_match('/^([A-Za-z]+):(\w+)$/', $term['id'], $m) ? $m[1] . '_' . $m[2
 echo render_display_page(__DIR__ . '/pages/ontology_term.php', [
     'term' => $term, 'prefix' => $prefix, 'ontology_name' => $ontologies[$prefix],
     'release' => (string) (moop_ontology_meta($prefix)['release'] ?? ''), 'view' => $view, 'rels' => $rels,
-    'written_html' => $written_html, 'records' => $records, 'records_elsewhere' => $records_elsewhere,
+    'written_html' => $written_html, 'written_jumps' => $written_jumps, 'records' => $records, 'is_stage' => $is_stage, 'records_elsewhere' => $records_elsewhere,
     'term_images' => $term_images, 'scope' => $prefix === 'GO' ? moop_ob_scope() : [], 'gene_rows' => $gene_rows, 'genes_missing' => $genes_missing, 'gene_download' => $gene_download,
     'links' => $obo === '' ? [] : [
         'OLS (EMBL-EBI)' => 'https://www.ebi.ac.uk/ols4/ontologies/' . strtolower($prefix) . '/classes?obo_id=' . rawurlencode($term['id']),
         'OBO PURL'       => 'http://purl.obolibrary.org/obo/' . $obo,
     ],
-    'page_styles' => [moop_url_base() . '/css/parent-nav.css', moop_url_base() . '/css/ontology-browser.css'],
-    'page_script' => [moop_url_base() . '/js/modules/parent-nav.js', moop_url_base() . '/js/ontology-term.js'],
+    'page_styles' => [moop_url_base() . '/css/ontology-browser.css'],
+    'page_script' => [moop_url_base() . '/js/ontology-term.js'],
 ], $term['label'] . ' (' . $term['id'] . ')');
