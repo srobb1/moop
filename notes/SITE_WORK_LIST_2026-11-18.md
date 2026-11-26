@@ -704,3 +704,10 @@ Planosphere
         (retrieve_selected_sequences.php takes one); the invented `'v1'` gene set at ~48 sites (see ASSEMBLY_WITHOUT_GENE_SET_PLAN).
       - Pipeline, for compute (PIPELINE_CHECKS_FROM_WEB_2026-10-21): §2 gene-less gene sets missing from active_genesets.tsv,
         §4 unnamed genes "named" by their transcript ID -- both marked "decide"; check whether naming v2 settled §4.
+- [ ] **Know when any of the 3 sites has new messages (Sofia 11-25).** Sofia checks simrbase daily, not Planosphere or
+      Cutting Class, so feedback there can sit unseen (none sent yet on either, as of 11-25). Each site keeps its own
+      feedback.json beside its users file (lib/feedback.php, moop_feedback_new_count()). Options, cheapest first:
+      (a) simrbase admin dashboard/navbar shows "New messages: Planosphere 2, Cutting Class 1" with links -- read the
+      sibling sites' feedback files (same host; find them like update_sites.sh finds checkouts, or a `linked_sites`
+      setting); (b) the daily email in notes/EMAIL_ALERTS_PLAN.md item 14, covering all 3 sites in one email;
+      (c) a browser/phone push. Suggest (a) now, (b) when the email work is built. **S-M**
