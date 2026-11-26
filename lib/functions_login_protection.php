@@ -71,7 +71,14 @@ function save_login_attempts(array $attempts) {
         }
     }
 
-    @file_put_contents($file, json_encode($attempts, JSON_PRETTY_PRINT), LOCK_EX);
+    // A failed write means brute-force protection silently stops counting (fail-open), so say so
+    // in the error log instead of hiding it with @.
+    if (@file_put_contents($file, json_encode($attempts, JSON_PRETTY_PRINT), LOCK_EX) === false) {
+        error_log('MOOP: could not write login attempts file ' . $file . ' -- brute-force protection is not counting');
+        return;
+    }
+    // It holds visitors' addresses and usernames: not world-readable (was 644 via the umask).
+    @chmod($file, 0640);
 }
 
 /**
