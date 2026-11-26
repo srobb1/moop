@@ -192,5 +192,5 @@ annotated to the term itself (`direct`) and genes with any GO term per gene set 
 - **An ontology is configured but nothing shows.** It was never built on this site (opt-in, see
   §3).
 
-Background and decisions: `notes/ONTOLOGY_BROWSER_PLAN.md` (original plan; the GO part is
+Background and decisions: `notes/archive/ONTOLOGY_BROWSER_PLAN.md` (original plan; the GO part is
 superseded by this document).
