@@ -239,6 +239,16 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **⭐ DO FIRST next session (Sofia 11-25, likely Mon 11-30) — three items:**
+      1. **New-message alerts across the 3 sites** — the item further down this Inbox ("Know when any of the 3 sites
+         has new messages"); suggested start: unread counts for Planosphere + Cutting Class on simrbase's dashboard.
+      2. **System Monitor: give the Not found page its own tile.** It is outside the human check on purpose (old links
+         from papers), so it lands in "Anonymous, unchecked" and pulls Cutting Class's "turned away" down (77-82% on
+         11-24/25 vs ~97% without it). lib/request_metrics.php gate + admin/pages/system_monitor.php "Who got in".
+      3. **Permissions checker: mark logs/ sensitive.** error.log and login_attempts.json hold addresses and usernames,
+         but the logs/ rule (lib/permission_check.php ~1026) is not 'sensitive', so a world-readable file there is never
+         flagged (login_attempts.json sat at 644 on all 3 sites until 11-25). Marking it wants logs/ at 2770: the
+         dashboard warns until root changes the 3 folders -- give the command with it.
 - [x] DONE 11-25 (15969c4a). **Amber = attention color (Sofia 11-25):** --moop-attention-* + .btn-attention, Site Colors ->
       Attention (empty = MOOP amber, not tied to the main color); every amber use moved onto it (Expand column, MOOPmart
       prefill, stale chips, Primer Maker callout). Genome browser: amber "New window" button with a label.
@@ -597,7 +607,7 @@ Planosphere
       for the internal (IP_IN_RANGE) viewer, so check it as PUBLIC (view-as-PUBLIC preview) and read
       $__cl_also; find which data row is a string, fix the reader, add a smoke test with that shape. A crash =
       a visitor gets a broken gene page. **S-M**
-- [ ] **Review docs/ (Sofia 11-24: "too many for me to remember").** 69 files (+ CLAUDE.md, README, 138 notes),
+- [x] DONE 11-25 (docs 566d38d5: 22 docs archived, docs/README.md full index, one-page overview; notes c8ddce1c + 24886fb9: 63 archived, 29 of those deleted). **Review docs/ (Sofia 11-24: "too many for me to remember").** 69 files (+ CLAUDE.md, README, 138 notes),
       all public on GitHub. Plan: one table, each doc -> KEEP (current, say for whom: visitor / admin /
       installer / developer) / UPDATE (what is stale) / MERGE (into which) / ARCHIVE / DELETE, checked against
       the CODE, not memory (feedback_read_code_not_just_docs). Seen 11-24: docs/archive (5), JBrowse2 has 13 +
