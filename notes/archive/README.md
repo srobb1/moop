@@ -2,19 +2,22 @@
 
 Moved here 2026-11-25 (notes review). These are history, not instructions. **Status lines at the top
 of an archived note are often stale** — several still say "not started" for features that were built
-(gene images, sequence headers, the Planosphere Rosetta pages, the shared scope selector). Read the
+(sequence headers, the Planosphere Rosetta pages, the shared scope selector). Read the
 code, not the header.
 
-| Why archived | Notes |
+| Why kept | Notes |
 |---|---|
-| Built; the code (and docs/) is now the record | GENE_IMAGES_PLAN, GROUP_TAXON_CHECKER_PLAN, ONTOLOGY_BROWSER_PLAN (-> docs/ONTOLOGIES.md), PLANOSPHERE_PAGE_ROSETTA_PLAN, PRIMER_BLAST_TOOL_PLAN, SEQUENCE_HEADERS_PLAN, SHARED_SCOPE_SELECTOR_PLAN, ANNOTATION_SCORES, TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18, TOUR_DRAFT_2026-11-24, NEW_TAB_LINKS_2026-11-20 |
-| Finished checklists and fixed bugs | BUG_HUNT_2026-10-21, REPO_CLEANUP_CHECKLIST, SECURITY_AUDIT_CHECKLIST, SEARCH_RANKING_LITERAL_TIER, UNUSED_FUNCTIONS_CLEANUP_PLAN, ANNOTATION_LOADING_DATA_DEFECTS, ANNOTATION_SOURCE_NAMING_RULES, CROSSWALK_NVEC_UTR_OVERLAP_FROM_WEB_2026-11-18, CROSSWALK_UNLINKED_IDS_REQUEST_2026-11-19, PIPELINE_RELOAD_PLAN |
-| Answered web <-> compute notes | ANATOMY_IDS_FOR_COMPUTE / FROM_COMPUTE_2026-11-19 (+ ANATOMY_UNMAPPED_IDS .tsv), CLADE_HOMOLOGS_V2_FROM_COMPUTE, CLADE_ORTHOLOGY_NOTE_FROM_WEB, CLADE_OUTGROUPS_FROM_COMPUTE (all three folded into docs/CLADE_HOMOLOGS_FORMAT.md) |
-| Superseded plans | EXPRESSION_DATA_LAYER_PLAN, EXPRESSION_EXPLORER_PLAN, EXPRESSION_GENE_PAGE_PLAN (bigWig route dropped 10-09), NAMING_ANNOTATIONS_FOR_THE_SITE_2026-10-01, NEW_TOOL_SURVEY_AND_RECOMMENDATIONS, ANNOTATIONS_TREE_PLAN_2026-10-28, annotation_config_descriptions.json |
-| Dated reviews and session handoffs | NAMING_V2_REVIEW_2026-09-25/28/29/30, COKUS_REVIEW, CLOSEST_SPECIES_NOTES, RNASEQ_NOTES_REVIEW, SCHEMA_AND_COLD_CACHE_REVIEW, PAGE_BY_PAGE_AUDIT_PLAN, PLANOSPHERE_PAGE_REVIEW_2026-11-12, SESSION_HANDOFF_* (6) |
-| Out of date (disk changed 10-21) | STORAGE_AND_RAM_TESTING, IT_REQUEST_RAM_INCREASE, IT_REQUEST_SEND (both marked DO NOT SEND) |
-| Merged into a kept note (whole text appended there) | CROSS_ANNOTATION_SEARCH_PLAN -> MOOPMART_FEATURE_IDEAS; SRA_RNASEQ_DISCOVERY_PLAN -> EXPRESSION_ANALYSIS_PLAN; USE_CASES_AND_HELP_ROUTER_PLAN + GLOSSARY_TERM_CANDIDATES -> USER_PAGE_HELP_AUDIT; SEARCH_FEATURE_LEVEL_INCONSISTENCY -> SEARCH_FEATURE_LEVEL_DECISION |
-| Open lines copied to the work list Inbox | NEXT_SESSION_CHECKLIST, scalability_improvements, DOWNLOAD_FILENAMES_REOPENED, RESULTS_TABLE_TOOLBAR_REVIEW, PIPELINE_CHECKS_FROM_WEB_2026-10-21 |
+| Code or docs cite them for the reasoning behind a design | PRIMER_BLAST_TOOL_PLAN, PLANOSPHERE_PAGE_ROSETTA_PLAN, SHARED_SCOPE_SELECTOR_PLAN, PAGE_BY_PAGE_AUDIT_PLAN, RESULTS_TABLE_TOOLBAR_REVIEW, GROUP_TAXON_CHECKER_PLAN, ONTOLOGY_BROWSER_PLAN (docs/ONTOLOGIES.md) |
+| Built, and the only written record of its standard | SEQUENCE_HEADERS_PLAN (FASTA header standard) |
+| Measurements and why they were wrong | IT_REQUEST_RAM_INCREASE (the disk reading off by ~60x), IT_REQUEST_SEND, STORAGE_AND_RAM_TESTING, SCHEMA_AND_COLD_CACHE_REVIEW, SEARCH_RANKING_LITERAL_TIER |
+| History: why things are the way they are | BUG_HUNT_2026-10-21, NAMING_V2_REVIEW_2026-09-25/28/29/30, NAMING_ANNOTATIONS_FOR_THE_SITE_2026-10-01, COKUS_REVIEW, CLOSEST_SPECIES_NOTES, RNASEQ_NOTES_REVIEW, EXPRESSION_DATA_LAYER_PLAN, EXPRESSION_EXPLORER_PLAN, EXPRESSION_GENE_PAGE_PLAN (bigWig route dropped 10-09), NEW_TOOL_SURVEY_AND_RECOMMENDATIONS, PIPELINE_RELOAD_PLAN, ANNOTATION_LOADING_DATA_DEFECTS, ANNOTATION_SOURCE_NAMING_RULES, ANATOMY_IDS_FROM_COMPUTE_2026-11-19 |
+| Open lines copied to the work list Inbox | NEXT_SESSION_CHECKLIST, DOWNLOAD_FILENAMES_REOPENED, PIPELINE_CHECKS_FROM_WEB_2026-10-21 (plus RESULTS_TABLE_TOOLBAR_REVIEW above) |
+| Planning drafts behind a finished page | TOUR_DRAFT_2026-11-24 |
+
+**Deleted 2026-11-25 (29 files):** notes whose full text lives elsewhere (the three clade notes, now in
+docs/CLADE_HOMOLOGS_FORMAT.md; five notes appended whole to kept notes), features built and documented
+(gene images, annotation scores), finished checklists, answered requests, six session handoffs and two
+one-day plans. Every one is still in git: `git show c8ddce1c:notes/archive/<name>`.
 
 **Left in notes/ on purpose although finished:** NAMING_V2_PLAN, NAMING_STATEMENTS_ON_SITE_PLAN,
 ASSEMBLY_NAME_IS_ID_PREFIX_FROM_WEB_2026-11-20, EXPRESSION_COUNT_TABLES_PLAN and

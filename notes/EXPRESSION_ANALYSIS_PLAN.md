@@ -144,7 +144,7 @@ before the first real bundle is copied over.
 
 ## Merged: Public RNA-seq (SRA/ENA) discovery for the Expression browser — idea/plan
 
-*(Was `notes/SRA_RNASEQ_DISCOVERY_PLAN.md`, merged here 2026-11-25; the original is in `notes/archive/`.)*
+*(Was `notes/SRA_RNASEQ_DISCOVERY_PLAN.md`, merged here 2026-11-25; the separate file was deleted the same day -- old copy: `git show c8ddce1c:notes/archive/<name>`.)*
 
 **Status:** idea captured 2026-07-14 (user, thinking out loud). Not started. Pairs with the
 Expression Explorer plan.

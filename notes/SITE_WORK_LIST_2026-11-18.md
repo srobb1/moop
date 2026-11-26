@@ -90,7 +90,7 @@ Order of work, and why:
       "genomes" have no gene level) or a join that drops the gene? Then decide how to show them. **M**
 - [x] DONE 11-20 (A): records looked up in their paper's assembly (site_config crosswalk 'ambiguous_ids': 5 papers placed from the data; lib/crosswalk.php moop_crosswalk_record_*/exclusions; records table, download, gene card, ID search, filter box, Data Exporter). Compute's per-paper check (B) on hold. **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** 11-20: compute ANSWERED (`notes/archive/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md` §5: look up by source+ID; Contig >7727 = newmark_ests; ≤7727 needs their per-paper check) — web not done yet. Same name in up to 4
       crosswalk sources mapping to different genes (Contig1038). Needs a paper → source table from compute;
-      then look each record up in its own source. `notes/archive/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md` §5. **M**
+      then look each record up in its own source. `ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md` (deleted 11-25; `git show c8ddce1c:ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md (deleted 11-25; git show c8ddce1c:notes/archive/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md)`) §5. **M**
 - [x] **Anatomy records with no gene: say why, link to where it aligns.** DONE 11-19 — "no gene ⓘ" + reason
       + genome link, on the anatomy table AND the Rosetta Stone page (lib/crosswalk.php moop_crosswalk_unlinked /
       _reason / _no_gene_html), from compute's `unlinked` table.
@@ -151,7 +151,7 @@ Order of work, and why:
       DONE 11-19: headings (Browse & search / Expression / Sequences / Export) + one line per tool,
       opt-in per site (Manage Tools: "Use the suggested groups", headings, "Show a line of text");
       ON for simrbase only. Renamed: RNA-seq Expression Explorer, Expression by Anatomy. Endo-Atlas
-      stays in Research only (decided). Ideas: `notes/archive/TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md`.
+      stays in Research only (decided). Ideas: `TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md` (deleted 11-25; `git show c8ddce1c:TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md (deleted 11-25; git show c8ddce1c:notes/archive/TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md)`).
       + the same line in a band under each tool page's header (tool_page_blurb(); one text, two places).
       Rosetta wording: never "old/older" (some IDs are just not the main ones).
 - [x] **Page titles differ from menu names:** DONE 11-19 (Annotation Search, Retrieve Sequences; tab titles too). "Search Features by Annotation" (menu: Annotation Search),
@@ -160,7 +160,7 @@ Order of work, and why:
       main menu hrefs assume "/moop"); CI passes only because it has no config_editable.json. Make them
       hermetic. Also 2 failing on HEAD before 11-19: "gene sets of one organism can share IDs",
       "a paralog with no link pattern links to its gene page". **S**
-- [x] 11-20 (F): DONE -- home chips, tool links, organism icon now same tab; LISTED in notes/archive/NEW_TAB_LINKS_2026-11-20.md (140 off-site keep; 62 on-site: change home chips, tool buttons, organism picker; keep results lists) -- waiting for Sofia. **Links that open a new tab:** list every one on SIMRbase (we likely do it too often), then
+- [x] 11-20 (F): DONE -- home chips, tool links, organism icon now same tab; LISTED in NEW_TAB_LINKS_2026-11-20.md (deleted 11-25; git show c8ddce1c:notes/archive/NEW_TAB_LINKS_2026-11-20.md) (140 off-site keep; 62 on-site: change home chips, tool buttons, organism picker; keep results lists) -- waiting for Sofia. **Links that open a new tab:** list every one on SIMRbase (we likely do it too often), then
       decide which keep it — usually only links that leave the site. **S** (list) / **M** (fix)
 
 ## 4. Visual fixes — batch them

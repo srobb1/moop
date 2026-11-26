@@ -144,7 +144,7 @@ that discriminate:
 - `Petromyzon_marinus` — the 3,331 childless genes. Must not regress ID lookups for them.
 - A protein ID (`…:pep`) — must still find something.
 
-Related: `SEARCH_FEATURE_LEVEL_INCONSISTENCY.md` (the original diagnosis, still accurate on
+Related: the original diagnosis, appended at the end of this file (§Merged, still accurate on
 the problem), `notes/archive/SEARCH_RANKING_LITERAL_TIER.md`, [[annotations-attach-to-mrna]].
 
 ---
@@ -236,7 +236,7 @@ Same day: the menu-bar box (api/feature_search.php) got a last, case-insensitive
 
 ## Merged: Search results depend on WHICH LEVEL of the hierarchy your term matched
 
-*(Was `notes/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`, merged here 2026-11-25; the original is in `notes/archive/`.)*
+*(Was `notes/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`, merged here 2026-11-25; the separate file was deleted the same day -- old copy: `git show c8ddce1c:notes/archive/<name>`.)*
 
 *(The options below came before the decision at the top of this file; the decision wins.)*
 

@@ -133,7 +133,7 @@ need.
 
 ## Merged: Cross-Annotation Search Feature Plan
 
-*(Was `notes/CROSS_ANNOTATION_SEARCH_PLAN.md`, merged here 2026-11-25; the original is in `notes/archive/`.)*
+*(Was `notes/CROSS_ANNOTATION_SEARCH_PLAN.md`, merged here 2026-11-25; the separate file was deleted the same day -- old copy: `git show c8ddce1c:notes/archive/<name>`.)*
 
 **Date:** January 27, 2026  
 **Status:** Planning Phase

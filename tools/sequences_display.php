@@ -96,7 +96,7 @@ if (!empty($available_sequences) && array_reduce($available_sequences, function(
                         // gloss() the LABEL, not the config key: the key is 'transcript'/'genome' while the
                         // glossary defines 'mRNA'/'CDS'/'protein' — the words actually shown. These headers
                         // are mode selectors the reader chooses between to get a sequence, which is the
-                        // "gloss labels and controls, not prose" case in notes/archive/GLOSSARY_TERM_CANDIDATES.md.
+                        // "gloss labels and controls, not prose" case in notes/USER_PAGE_HELP_AUDIT.md (§Merged: Glossary).
                         // One wrap covers every sequence type, including any added to config later, and
                         // gloss() returns plain text for an undefined term so 'Genome' degrades safely.
                         echo '        <span class="text-white px-2 py-1 rounded ' . $badge['class'] . '"'

@@ -9,7 +9,7 @@ organisms/<Organism>/
     organism.sqlite              genes, annotations       (compute pipeline; not covered here)
     crosswalk.sqlite             ID translation           docs/CROSSWALK_FORMAT.md
     anatomy_expression.sqlite    where genes are expressed, by anatomy term   §1 (BUILT)
-    gene_images.sqlite           in situ images, plots, movies per gene       §2 (BEING BUILT)
+    gene_images.sqlite           in situ images, plots, movies per gene       §2
     .images/                     the image files + images.tsv (their source list)
 ```
 
@@ -69,7 +69,7 @@ Schmidtea mediterranea, built 2026-11-09: 80,789 rows read → 77,432 curations,
 
 ---
 
-## 2. `gene_images.sqlite` + `.images/` — gene images (design 2026-11-12, being built)
+## 2. `gene_images.sqlite` + `.images/` — gene images (design 2026-11-12, built: lib/gene_images.php, scripts/build_gene_images.php)
 
 **Why the folder is hidden (`.images`, not `images`):** every subfolder of an organism folder is read
 as an assembly. As `images/` it showed up on Manage Groups as an unloaded assembly with gene sets

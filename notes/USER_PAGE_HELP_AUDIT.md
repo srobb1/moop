@@ -79,22 +79,22 @@ search, and the index is where they land from nowhere.
 ## Known page-level issues already recorded elsewhere
 
 - **Search returns different results depending on which level of the hierarchy matched** —
-  `notes/archive/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`. Deliberately deferred; it is a semantics
+  `notes/SEARCH_FEATURE_LEVEL_DECISION.md`. Deliberately deferred; it is a semantics
   decision, and the user's stated preference is that everything should bubble up to the
   gene. This affects what the results table *means*, so it should be settled before writing
   help that describes it.
 - **The shared organism/gene-set scope selector is duplicated three times and has drifted** —
   `notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md`. The same control behaving differently on different
   pages is a clarity problem as much as a code one.
-- **Per-tool overview `(i)` and a use-case router page** — `notes/archive/USE_CASES_AND_HELP_ROUTER_PLAN.md`.
+- **Per-tool overview `(i)` and a use-case router page** — §"Merged: Use-case router page" below.
   The per-tool overview is the small piece to do first.
 
 ---
 
 ## Related
 
-`notes/archive/USE_CASES_AND_HELP_ROUTER_PLAN.md`, `notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md`,
-`notes/archive/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`, `notes/ADMIN_UI_FOLLOWUPS.md`
+§"Merged: Use-case router page" below, `notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md`,
+`notes/SEARCH_FEATURE_LEVEL_DECISION.md`, `notes/ADMIN_UI_FOLLOWUPS.md`
 (admin side, separate).
 
 ---
@@ -158,7 +158,7 @@ in the DATA and were left alone:
 
 ## Merged: Use-case router page, and per-tool "what is this" overviews
 
-*(Was `notes/USE_CASES_AND_HELP_ROUTER_PLAN.md`, merged here 2026-11-25; the original is in `notes/archive/`.)*
+*(Was `notes/USE_CASES_AND_HELP_ROUTER_PLAN.md`, merged here 2026-11-25; the separate file was deleted the same day -- old copy: `git show c8ddce1c:notes/archive/<name>`.)*
 
 ⭐ **START HERE 2026-08-06 — use cases are the next task, and the groundwork is done.**
 
@@ -356,7 +356,7 @@ Contained JS change, no new endpoint. Good first task next session.
 
 ## Merged: Glossary — candidate terms, and the boundary with existing help
 
-*(Was `notes/GLOSSARY_TERM_CANDIDATES.md`, merged here 2026-11-25; the original is in `notes/archive/`.)*
+*(Was `notes/GLOSSARY_TERM_CANDIDATES.md`, merged here 2026-11-25; the separate file was deleted the same day -- old copy: `git show c8ddce1c:notes/archive/<name>`.)*
 
 *(Status as of 2026-08-04. The glossary has grown a lot since; check `metadata/glossary.json` before adding a candidate.)*
 

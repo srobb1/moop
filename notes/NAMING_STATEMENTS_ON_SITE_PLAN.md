@@ -162,7 +162,7 @@ Steps 1–3 must be on `main` and live before step 4.
 ## Related, same file
 
 `tools/pages/parent.php:517` still fatals on gene sets with no GFF (17 organisms; see
-`notes/archive/SESSION_HANDOFF_2026-09-17.md`). The overview work touches the same template; fix it
+`SESSION_HANDOFF_2026-09-17.md` (deleted 11-25; `git show c8ddce1c:SESSION_HANDOFF_2026-09-17.md (deleted 11-25; git show c8ddce1c:notes/archive/SESSION_HANDOFF_2026-09-17.md)`)). The overview work touches the same template; fix it
 first so the new card can be checked on those organisms too.
 
 ---
