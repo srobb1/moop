@@ -236,7 +236,7 @@ return [
             // reference gene, whatever the visitor ticks (the old Rosetta page's smed_20140614 column).
             'always_show' => ['smed_20140614'],
             // `Contig…` ids name DIFFERENT sequences in two EST assemblies (compute,
-            // notes/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md §5: same number, a different gene, 0 agree).
+            // notes/archive/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md §5: same number, a different gene, 0 agree).
             // A curated record means the assembly its PAPER used, so it is looked up in those sources
             // only (lib/crosswalk.php moop_crosswalk_record_sources). Papers placed from the data, 2026-11-20:
             // B-papers never cite a number above 7727 (B's last) and their ids are B-only 162:0 and

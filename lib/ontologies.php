@@ -1,7 +1,7 @@
 <?php
 /**
  * Ontologies (PLANA, BSPO, ECO, ...) as small read-only SQLite files: one per ontology.
- * Plan: notes/PLANOSPHERE_PAGE_ROSETTA_PLAN.md.
+ * Plan: notes/archive/PLANOSPHERE_PAGE_ROSETTA_PLAN.md.
  *
  *   <cache_path>/ontologies/plana.sqlite     terms, synonyms, closure (every inferred link), meta
  *   <cache_path>/ontologies/sources/         the downloaded TSVs each file was built from

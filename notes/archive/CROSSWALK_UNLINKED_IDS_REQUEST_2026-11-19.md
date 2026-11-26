@@ -1,6 +1,6 @@
 # Request for compute: ship WHY an ID is not linked, and WHERE it aligned (2026-11-19)
 
-Follows `notes/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md`. Today an anatomy (PAGE) record whose ID
+Follows `notes/archive/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md`. Today an anatomy (PAGE) record whose ID
 reaches no gene shows a bare "–" in the gene column, which reads as broken. You already know the
 reason for every such ID, and where most of them aligned; the crosswalk file just doesn't carry
 it, because it keeps only the IDs that reached a gene.
@@ -53,7 +53,7 @@ Questions for you:
    awkward on your side, skip it: the web can call anything that is in neither `map` nor
    `unlinked` "not in the reference data" itself.
 3. **Contigs:** the same table should key on source + ID (Contig1038 is two different sequences).
-4. **Kao 2013's 429 unlinked `OX_Smed_1.0.N` IDs** (list: `notes/ANATOMY_UNMAPPED_IDS_2026-11-19.tsv`,
+4. **Kao 2013's 429 unlinked `OX_Smed_1.0.N` IDs** (list: `notes/archive/ANATOMY_UNMAPPED_IDS_2026-11-19.tsv`,
    PMID 24238224): how many are numbers MISSING from `ox_Smed_v2.nt`, and how many are in it but
    aligned with no gene there? Sofia will hunt down only the missing ones (and whether v2 dropped
    them on purpose).

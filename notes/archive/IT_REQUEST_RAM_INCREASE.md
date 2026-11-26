@@ -323,4 +323,4 @@ checksums every file — textbook cache destroyer). Ask IT what these are schedu
 ⚠️ The watcher is **not currently running** (it stopped at 09:42 on 07-30). Restart it before
 drawing conclusions, and let it cover several nights — one night is one data point.
 - Full method, the four measurement traps, and the RAM before/after test design:
-  **`notes/STORAGE_AND_RAM_TESTING.md`**.
+  **`notes/archive/STORAGE_AND_RAM_TESTING.md`**.

@@ -261,7 +261,7 @@ if ($page_lang !== 'en'): require_once __DIR__ . '/../lib/i18n.php'; ?>
 <?php /* buttons.print.min.js is deliberately NOT loaded: the Print/PDF button was removed
          (it could not produce a PDF — pdfmake is not vendored — and a wide genomic table is
          not a paper artefact). Copy/CSV/Excel cover taking the data away; Ctrl+P still
-         prints the page. See notes/RESULTS_TABLE_TOOLBAR_REVIEW.md. */ ?>
+         prints the page. See notes/archive/RESULTS_TABLE_TOOLBAR_REVIEW.md. */ ?>
         <script src="<?= moop_asset_url('js/vendor/buttons.colVis.min.js') ?>"></script>
         <script src="<?= moop_asset_url('js/vendor/jszip.min.js') ?>"></script>
         <script src="<?= moop_asset_url('js/vendor/dataTables.colReorder.min.js') ?>"></script>

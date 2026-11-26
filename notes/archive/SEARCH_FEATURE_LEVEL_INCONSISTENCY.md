@@ -141,5 +141,5 @@ Discovered 2026-07-23 while adding Assembly and Gene Set columns to the results 
 duplication became easy to see once Type sat beside them. **Long-standing; unrelated to that
 change.**
 
-Related: `notes/RESULTS_TABLE_TOOLBAR_REVIEW.md`, `notes/MOOPMART_FEATURE_IDEAS.md`
+Related: `notes/archive/RESULTS_TABLE_TOOLBAR_REVIEW.md`, `notes/MOOPMART_FEATURE_IDEAS.md`
 (the hardcoded-type map), the memory note "annotations attach to mRNA".

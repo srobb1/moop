@@ -1,7 +1,9 @@
 # Assemblies with no gene set — design a real path instead of inventing `v1`
 
-Status: **note only, nothing implemented. Deliberately deferred — do not start this without
-the user.** Raised by the user 2026-07-20 during the manage_groups audit: *"we should make a
+Status: **partly built.** BLAST-only genomes (an assembly shown for BLAST with no gene pages) were built
+with the permissions work, 2026-11-13/14 (`blast_only` marker; `notes/PERMISSIONS_PLAN.md` step 6). The core
+question below -- a real path instead of inventing `v1` -- is still open; do not start it without the user.
+(Original status, 2026-07-20: note only, nothing implemented.) Raised by the user 2026-07-20 during the manage_groups audit: *"we should make a
 new path when an organism does not have a gene set."*
 
 **The user's framing, which is the point of the whole note:** the site now *requires* a

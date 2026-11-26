@@ -2,7 +2,7 @@
 """Cold vs warm timing for ONE database, with eviction VERIFIED via mincore.
 
 Deliberately one database, not a sweep: a full-corpus benchmark flushes the page
-cache for hours (see notes/STORAGE_AND_RAM_TESTING.md). This touches ~0.4 GB.
+cache for hours (see notes/archive/STORAGE_AND_RAM_TESTING.md). This touches ~0.4 GB.
 """
 import sqlite3, sys, time
 sys.path.insert(0, '/var/www/html/moop/notes/bench')

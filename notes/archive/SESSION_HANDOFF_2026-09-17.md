@@ -105,7 +105,7 @@ Possibly expected for LiftOn output; decide at reload.
    that does not do what they want. Renaming is a product call.
 3. **Use-case cards** — the user's own ask, groundwork done: the page finder is live, every
    page declares `page_purpose()`, and seed content is harvested in
-   `notes/USE_CASES_AND_HELP_ROUTER_PLAN.md` §2b. One decision left: a second card list on
+   `notes/archive/USE_CASES_AND_HELP_ROUTER_PLAN.md` §2b. One decision left: a second card list on
    the finder, or its own topic. The user's earlier framing points at the former.
    ⚠️ Several natural use cases would currently walk a reader into a 500 — do item 1 first.
 4. **2 of 96 gene sets are public** (1 of 85 organisms, Nematostella). Unchanged since July.

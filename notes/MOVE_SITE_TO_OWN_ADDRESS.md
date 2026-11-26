@@ -1,5 +1,12 @@
 # Moving a MOOP site to its own address — checklist
 
+> **Status 2026-11-25: the move is DONE** for all three sites (simrbase.stowers.org, cuttingclass.stowers.org,
+> planosphere.stowers.org, own server blocks, `link_prefix` "/", `/moop/` -> 308). Proven live 11-24: security
+> rules with real files on all 3 sites, remote tracks through the proxy, render_compare's 52 pages. Guard
+> redeployed 11-25 (notes/, CLAUDE.md now denied). The boxes below were written before the move and were not
+> ticked one by one; what is STILL open is kept in `notes/SITE_WORK_LIST_2026-11-18.md` §0 ("Close out the move
+> checklist"): smedgd conf install, the "verify after the switch" walk, README/INSTALL.md on serving at "/".
+
 Two moves may use this (2026-11-09: cuttingclass is fast-tracked; simrbase dropping `/moop` is LIKELY but NOT decided — keeping `/moop` costs nothing, the code works either way):
 
 1. **simrbase → `simrbase-dev.stowers.org/`** (drop `/moop`). simrbase has no real users yet, so it

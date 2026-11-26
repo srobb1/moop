@@ -47,7 +47,7 @@ Order of work, and why:
       smedgd.org + www A records at 161.129.22.133. STILL OPEN: the "Verify after the switch"
       walk (render_compare's 52 pages ran OK 11-24 -- covers most of it); README + docs/INSTALL.md say nothing
       about serving a site at its own address (link_prefix "/"). Then tick the file. **S-M**
-- [x] (code DONE e2da7c81; ROOT must redeploy the 3 guard.conf) **SECURITY (found 11-24): code and notes folders are served to the internet.** A .php placed in scripts/,
+- [x] DONE 11-25 (code e2da7c81; root redeployed the 3 guard.conf, notes/ + CLAUDE.md 404 on all 3 sites) **SECURITY (found 11-24): code and notes folders are served to the internet.** A .php placed in scripts/,
       tests/, vendor/, lib/, includes/ RUNS from a URL on all 3 sites (probed with a real file); notes/*.md,
       CLAUDE.md, README.md, composer.json/.lock, vendor/composer/installed.json download (9 notes name internal
       172.16 addresses). 12 scripts/tests have no CLI-only guard -- incl. strip_auto_public_access.php and
@@ -88,9 +88,9 @@ Order of work, and why:
       transcript"). Investigate the exact-ID path vs the text path. **M**
 - [x] DONE (checked 11-24: answered by "no gene ⓘ" + reason + genome link, below, 11-19) **Anatomy search "gut" lists transcripts that have no gene.** — 11-19: 157 fixed (d5657132, dd_v6 gene ids); rest = ids not in crosswalk -> questions for compute; open: show "no current gene" instead of "–"? Why — data (13 transcriptome
       "genomes" have no gene level) or a join that drops the gene? Then decide how to show them. **M**
-- [x] DONE 11-20 (A): records looked up in their paper's assembly (site_config crosswalk 'ambiguous_ids': 5 papers placed from the data; lib/crosswalk.php moop_crosswalk_record_*/exclusions; records table, download, gene card, ID search, filter box, Data Exporter). Compute's per-paper check (B) on hold. **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** 11-20: compute ANSWERED (`notes/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md` §5: look up by source+ID; Contig >7727 = newmark_ests; ≤7727 needs their per-paper check) — web not done yet. Same name in up to 4
+- [x] DONE 11-20 (A): records looked up in their paper's assembly (site_config crosswalk 'ambiguous_ids': 5 papers placed from the data; lib/crosswalk.php moop_crosswalk_record_*/exclusions; records table, download, gene card, ID search, filter box, Data Exporter). Compute's per-paper check (B) on hold. **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** 11-20: compute ANSWERED (`notes/archive/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md` §5: look up by source+ID; Contig >7727 = newmark_ests; ≤7727 needs their per-paper check) — web not done yet. Same name in up to 4
       crosswalk sources mapping to different genes (Contig1038). Needs a paper → source table from compute;
-      then look each record up in its own source. `notes/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md` §5. **M**
+      then look each record up in its own source. `notes/archive/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md` §5. **M**
 - [x] **Anatomy records with no gene: say why, link to where it aligns.** DONE 11-19 — "no gene ⓘ" + reason
       + genome link, on the anatomy table AND the Rosetta Stone page (lib/crosswalk.php moop_crosswalk_unlinked /
       _reason / _no_gene_html), from compute's `unlinked` table.
@@ -131,7 +131,7 @@ Order of work, and why:
 - [x] **Gene card "copy" — does it copy too much?** — DONE 11-19: sections + indented evidence + link (Sofia chose). Look at what it puts on the clipboard; decide. **S**
 
 ## 2. Showing the site to someone — TALK
-- [x] **DONE 11-24: tour PUBLISHED** (page.php?p=tour, 12 steps, Nvec noggin-1, 7 new PUBLIC screenshots; text in notes/TOUR_DRAFT_2026-11-24.md). **A demo route.** One linear path through the site, written down: e.g. home → search a gene →
+- [x] **DONE 11-24: tour PUBLISHED** (page.php?p=tour, 12 steps, Nvec noggin-1, 7 new PUBLIC screenshots; text in notes/archive/TOUR_DRAFT_2026-11-24.md). **A demo route.** One linear path through the site, written down: e.g. home → search a gene →
       gene page cards → JBrowse → BLAST → MOOPmart → Planosphere link → AI guide. Each stop: what to
       click, the one sentence to say. Something to follow (or hand someone) instead of improvising.
       Becomes the skeleton of the tutorials in §7. **TALK, then M**
@@ -151,7 +151,7 @@ Order of work, and why:
       DONE 11-19: headings (Browse & search / Expression / Sequences / Export) + one line per tool,
       opt-in per site (Manage Tools: "Use the suggested groups", headings, "Show a line of text");
       ON for simrbase only. Renamed: RNA-seq Expression Explorer, Expression by Anatomy. Endo-Atlas
-      stays in Research only (decided). Ideas: `notes/TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md`.
+      stays in Research only (decided). Ideas: `notes/archive/TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md`.
       + the same line in a band under each tool page's header (tool_page_blurb(); one text, two places).
       Rosetta wording: never "old/older" (some IDs are just not the main ones).
 - [x] **Page titles differ from menu names:** DONE 11-19 (Annotation Search, Retrieve Sequences; tab titles too). "Search Features by Annotation" (menu: Annotation Search),
@@ -160,7 +160,7 @@ Order of work, and why:
       main menu hrefs assume "/moop"); CI passes only because it has no config_editable.json. Make them
       hermetic. Also 2 failing on HEAD before 11-19: "gene sets of one organism can share IDs",
       "a paralog with no link pattern links to its gene page". **S**
-- [x] 11-20 (F): DONE -- home chips, tool links, organism icon now same tab; LISTED in notes/NEW_TAB_LINKS_2026-11-20.md (140 off-site keep; 62 on-site: change home chips, tool buttons, organism picker; keep results lists) -- waiting for Sofia. **Links that open a new tab:** list every one on SIMRbase (we likely do it too often), then
+- [x] 11-20 (F): DONE -- home chips, tool links, organism icon now same tab; LISTED in notes/archive/NEW_TAB_LINKS_2026-11-20.md (140 off-site keep; 62 on-site: change home chips, tool buttons, organism picker; keep results lists) -- waiting for Sofia. **Links that open a new tab:** list every one on SIMRbase (we likely do it too often), then
       decide which keep it — usually only links that leave the site. **S** (list) / **M** (fix)
 
 ## 4. Visual fixes — batch them
@@ -682,3 +682,25 @@ Planosphere
       Glossary entry in simrbase + glossary.json.example; planosphere/cuttingclass glossaries are apache-
       owned -> add via Manage Glossary if wanted. NOT done: OMA-paired genes named by OTHER evidence (the
       "All N genes paired with human X" idea above) -- a later option.
+- [ ] **Internal addresses in the public repo (notes review 11-25).** 172.16.x addresses in 8 notes (CAPACITY_TEST,
+      SITE_WORK_LIST, TRACKS_PROXY; the rest now in notes/archive/) and 4 bench scripts (capacity.py, crossorg_ab.py,
+      loadtest.py, persistence.py); 22 notes name cerebro, simrbasenew, /home/smr or *.stowers.org hosts. No passwords or
+      keys. Moving files does not help (git history keeps them). Decide: leave, or edit them out going forward (history
+      would need a rewrite to truly remove them). Over HTTP notes/ is denied since the guard redeploy (404 on all 3 sites, checked 11-25).
+- [x] CHECKED 11-25. **Clade builder 1:1 bug (CLADE_ORTHOLOGY_NOTE 11-12):** fixed. 0 genes with more than one `1:1`
+      partner per gene set in hexacorallia, ray_finned_fish, planarians. (planarians shows 138,125 per ORGANISM only because
+      Romankenkius_sp has two gene sets in the run, ro03.kc1 + ro39.kc1.) Small follow-up: the Orthologs card groups by
+      organism, so a Romankenkius gene shows two 1:1 orthologs under one row -- label the rows by gene set there?
+- [ ] **Old checklist leftovers (moved here 11-25 from notes now in notes/archive/):**
+      - Docs not yet written (NEXT_SESSION_CHECKLIST, March): JBrowse track setup, site-data backup & restore, user
+        management, upgrading MOOP. Check docs/README.md first; some may now be covered.
+      - Connection reuse (`getDbConnection()` caches a PDO per file per request, ddc5bfe, July): ~1.8 ms warm, not a speed
+        fix. Was "keep or revert"; it has run since July with no trouble -- suggest close as keep.
+      - Scalability (scalability_improvements): home page reloads the taxonomy tree + access per visit; JBrowse config
+        globs all assembly JSON per page load. Both grow with organism count; measure before touching.
+      - Download filenames (DOWNLOAD_FILENAMES_REOPENED): re-check the other download producers (two files each, one large);
+        should `moop_download_filename()` refuse an empty scope part; should `transcript` read `mrna` in filenames.
+      - Results table (RESULTS_TABLE_TOOLBAR_REVIEW): a FASTA selection across several assembly/gene-set pairs is refused
+        (retrieve_selected_sequences.php takes one); the invented `'v1'` gene set at ~48 sites (see ASSEMBLY_WITHOUT_GENE_SET_PLAN).
+      - Pipeline, for compute (PIPELINE_CHECKS_FROM_WEB_2026-10-21): §2 gene-less gene sets missing from active_genesets.tsv,
+        §4 unnamed genes "named" by their transcript ID -- both marked "decide"; check whether naming v2 settled §4.

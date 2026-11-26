@@ -2,7 +2,7 @@
 /**
  * PAGE curations -- where genes are expressed, by anatomy term, from published papers -- as one
  * read-only SQLite file per organism:   organisms/<organism>/anatomy_expression.sqlite
- * Plan: notes/PLANOSPHERE_PAGE_ROSETTA_PLAN.md (step 2). Not "expression": that is MOOP's RNA-seq
+ * Plan: notes/archive/PLANOSPHERE_PAGE_ROSETTA_PLAN.md (step 2). Not "expression": that is MOOP's RNA-seq
  * heatmap tool (HOW MUCH); this is WHERE.
  *
  * SOURCE: the 9-column curation table in the PAGE repository (curation/OUTPUT/

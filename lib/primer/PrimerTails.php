@@ -53,7 +53,7 @@
  * So a tail belongs to the OUTPUT and to nothing else. It never reaches primer3,
  * never reaches a Tm calculation, and never reaches a genome alignment — not
  * even on its own. An earlier draft of this class BLASTed each tail against the
- * selected assembly as a QC step (notes/PRIMER_BLAST_TOOL_PLAN.md suggests it);
+ * selected assembly as a QC step (notes/archive/PRIMER_BLAST_TOOL_PLAN.md suggests it);
  * that is deliberately not here. The measurement it was based on is recorded in
  * the plan note if it is ever wanted, and it argues the check is near-worthless
  * anyway: a 13-base tail matches a 164 Mb genome exactly once, which is fewer

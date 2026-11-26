@@ -1,7 +1,7 @@
 # Site session handoff — 2026-10-06 (site agent)
 
 All of this is committed and pushed to main (last: `3184187b`). Pipeline-side work is in the
-other agent's handoff (`notes/SESSION_HANDOFF_2026-10-06.md`).
+other agent's handoff (`notes/archive/SESSION_HANDOFF_2026-10-06.md`).
 
 ## Next session (user, 2026-10-06): RELEASE PREP — getting human testers
 

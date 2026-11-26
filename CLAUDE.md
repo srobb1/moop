@@ -175,7 +175,7 @@ Folder paths still use `root_path`/`site_path`. Setting: `link_prefix` (2026-11-
 A content page linking to ANOTHER site writes `{name}/…` (e.g. `href="{simrbase}/tools/blast.php"`);
 the address comes from `linked_sites` (Site Configuration -> Linked sites), so that site moving is
 one setting (`moop_linked_sites_expand()`, lib/content_pages.php, 2026-11-13). Moving a
-site: `notes/MOVE_SITE_TO_OWN_ADDRESS.md` — the nginx half is still to do there.
+site: `notes/MOVE_SITE_TO_OWN_ADDRESS.md` — all three sites moved by 2026-11-25; leftovers in the work list §0.
 
 ### 4. Access Control Model
 

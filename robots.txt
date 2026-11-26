@@ -45,7 +45,7 @@ Disallow: /
 # Assistants fetching a page because ONE PERSON asked them to (not crawling, not training):
 # the agent guide and the stable JSON API, plus the descriptive pages. Bulk use is still limited
 # by the per-address rate limits; restricted data needs a login whoever asks.
-# Guide: /moop/llms.txt -- notes/AGENT_ACCESS_AUDIT_2026-11-17.md.
+# Guide: /llms.txt (design notes: AGENT_ACCESS_AUDIT_2026-11-17.md in the repo's notes/).
 User-agent: ChatGPT-User
 User-agent: Claude-User
 User-agent: Perplexity-User

@@ -184,7 +184,7 @@ sqlite3 organism.sqlite < data_loaders/build_fts_index.sql
 sqlite3 organism.sqlite "VACUUM;"     -- required, or the file does not shrink
 ```
 
-**The RAM request.** `notes/IT_REQUEST_RAM_INCREASE.md` is ready to send. 67 GB of
+**The RAM request.** `notes/archive/IT_REQUEST_RAM_INCREASE.md` is ready to send. 67 GB of
 databases behind a ~12 GB page cache on a rotational volume; same `COUNT(*)` is 7,051 ms
 cold and 2 ms warm. Ask is 16 → 64 GB.
 

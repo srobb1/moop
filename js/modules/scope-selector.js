@@ -1,7 +1,7 @@
 /**
  * The organism → assembly → gene-set scope selector -- behaviour. ONE implementation, used by
  * Annotation Search and the Data Exporter. Markup: includes/scope_selector.php. Data and
- * context: lib/scope_selector.php. Plan and history: notes/SHARED_SCOPE_SELECTOR_PLAN.md.
+ * context: lib/scope_selector.php. Plan and history: notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md.
  *
  * Until 2026-11-16 each page carried its own copy (different class names, same logic), and every
  * scope fix had to be made twice -- the second copy was repeatedly missed. Page-specific work

@@ -80,7 +80,7 @@ The PANTHER step (5) names more Congeria genes than OMA does. Yet it has **none*
 ## Still pending from before
 - The fly benchmark with OMA.
 - After NV2 and zebrafish OMA part 3: run mapGO, then `MOOP_RELOAD=1` those gene sets.
-- Merge notes/annotation_config_descriptions.json into the live annotation_config.json (the user does this). If the PANTHER step changes, the Score text needs updating.
+- Merge notes/archive/annotation_config_descriptions.json into the live annotation_config.json (the user does this). If the PANTHER step changes, the Score text needs updating.
 - Plain names from BLAST (3b) once the eross columns exist.
 - A PANTHER audit of 100 names. This is now the priority, per Finding 1.
 

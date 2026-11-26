@@ -7,7 +7,7 @@
  * copy of the list, and the copies drifted every time one was touched: the Data Exporter
  * ignored ?organism= / ?assembly= / ?gene_set= / ?group= entirely, so the "MOOPmart" link on
  * every gene-set page opened with nothing selected, while Search honoured all four.
- * notes/SHARED_SCOPE_SELECTOR_PLAN.md has the history.
+ * notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md has the history.
  *
  * Pieces:
  *   moop_scope_selector_data()     -- the tree + display info, from the visitor's access

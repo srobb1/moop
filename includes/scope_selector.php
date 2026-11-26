@@ -2,7 +2,7 @@
 /**
  * The organism scope selector -- ONE copy for every page where a visitor picks organisms /
  * gene sets. Behaviour: js/modules/scope-selector.js. Data: lib/scope_selector.php. Styles:
- * css/display.css (#scope-org-list). History and plan: notes/SHARED_SCOPE_SELECTOR_PLAN.md.
+ * css/display.css (#scope-org-list). History and plan: notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md.
  *
  * Two modes:
  *   multi  (default) -- Annotation Search, Data Exporter. Renders the whole step CARD: header

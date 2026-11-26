@@ -34,7 +34,7 @@ pair cannot amplify contaminating genomic DNA) needs exon coordinates — and MO
   `escapeshellarg()` treatment (CLAUDE.md §8) and a note in the environment check
   (`housekeeping_environment_check`, which already verifies the other CLI tools).
 
-Ranked #2 of the new-tool candidates in `notes/NEW_TOOL_SURVEY_AND_RECOMMENDATIONS.md` —
+Ranked #2 of the new-tool candidates in `notes/archive/NEW_TOOL_SURVEY_AND_RECOMMENDATIONS.md` —
 UCSC ships in-silico PCR as one of its five main tools, so the demand is not niche.
 
 ---
@@ -1479,7 +1479,7 @@ question the genome cannot: here, exactly one transcript gets a valid pair — n
 cross-amplification. That is a real result to show the user, not a diagnostic.
 
 ⚠️ Scope note: `genome.fa` is **per assembly**, `transcript.nt.fa` is **per gene set**. The scope
-selector must offer both levels — see `notes/SHARED_SCOPE_SELECTOR_PLAN.md`.
+selector must offer both levels — see `notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md`.
 
 ✅ **The migration is differentially testable, and should be.** The working BLAT implementation
 still exists, so run both engines over the same primers against the same assembly and compare

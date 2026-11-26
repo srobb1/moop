@@ -67,7 +67,7 @@ const DataTableExportConfig = {
     // exclude hidden columns to avoid a misalignment bug that no longer exists. A
     // wide genomic table is not a paper artefact; Copy/CSV/Excel cover taking the
     // data away, and Ctrl+P still prints the page. See
-    // notes/RESULTS_TABLE_TOOLBAR_REVIEW.md.
+    // notes/archive/RESULTS_TABLE_TOOLBAR_REVIEW.md.
     buttonDefs: {
         copy: {
             extend: 'copy',
@@ -173,7 +173,7 @@ const DataTableExportConfig = {
      * endpoint takes a single assembly, so rather than silently resolving everything
      * against whichever came first, we say so and let the user narrow. (Supporting a
      * genuine multi-assembly fetch means teaching the endpoint to take pairs — noted in
-     * notes/RESULTS_TABLE_TOOLBAR_REVIEW.md, not done here.)
+     * notes/archive/RESULTS_TABLE_TOOLBAR_REVIEW.md, not done here.)
      */
     fastaExportAction: function(e, dt, button, config) {
         if (!DataTableExportConfig.requireSelectedRows(dt)) return;

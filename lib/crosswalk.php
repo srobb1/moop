@@ -3,7 +3,7 @@
  * Crosswalk -- ID mappings between transcriptomes, microarrays, ESTs and reference genes, one
  * read-only SQLite file per organism:   organisms/<organism>/crosswalk.sqlite
  * On simrbase this is Planosphere's Rosetta Stone; the visible name is per site ('name' below).
- * Plan: notes/PLANOSPHERE_PAGE_ROSETTA_PLAN.md (step 3).
+ * Plan: notes/archive/PLANOSPHERE_PAGE_ROSETTA_PLAN.md (step 3).
  *
  * MODEL: every accession maps to one or more REFERENCE genes (the hubs: schMedS3 h1 genes and h2
  * genes). Two accessions are "the same gene" when they reach the same reference gene. Hubs whose

@@ -51,7 +51,7 @@ index is what a database is for. A scan cannot do it acceptably.
 Keeping it in its **own file** rather than in `organism.sqlite` preserves the whole point:
 it never inflates the organism database, and it is not paged in when nobody asks for
 domains. This is exactly the split already chosen for `expression.sqlite` in
-`notes/EXPRESSION_EXPLORER_PLAN.md`.
+`notes/archive/EXPRESSION_EXPLORER_PLAN.md`.
 
 ```sql
 CREATE TABLE domain_hit (
@@ -146,6 +146,6 @@ Place it in the gene page's section-nav flow (`js/modules/parent-nav.js`) as its
 4. Render the SVG.
 5. Only then generate across all gene sets.
 
-Related: `notes/EXPRESSION_EXPLORER_PLAN.md` (same separate-file pattern),
+Related: `notes/archive/EXPRESSION_EXPLORER_PLAN.md` (same separate-file pattern),
 `notes/QUERY_PERFORMANCE.md` (why cache footprint is the constraint),
 `scripts/check_sequence_id_match.sh`.

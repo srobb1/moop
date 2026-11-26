@@ -10,7 +10,7 @@ the previous round's numbers did not reproduce — eviction was assumed, not ver
 | `working_set.py` | bytes actually faulted in by one cold query (mincore delta) — the number the RAM ask rests on |
 | `prerank.py` | index-first ranking vs the general query shape |
 | `prerank_correct.py` | does pre-ranking change what the user sees, at the 2500 cap |
-| `disk_latency.py` | random 4K read latency per volume — this is what proved sdb is not rotational |
+| `disk_latency.py` | random 4K read latency per volume. ⚠️ **Do not trust it:** its `evict()` is advisory, so it measured page cache, wrong by ~60× (`notes/archive/IT_REQUEST_RAM_INCREASE.md` §5). Use `disk_random_read.py` (O_DIRECT) |
 
 Usage: `python3 cache.py evict <file>`, then the others. Paths are hardcoded to
 Nematostella; edit the `DB` constant for a reloaded organism.

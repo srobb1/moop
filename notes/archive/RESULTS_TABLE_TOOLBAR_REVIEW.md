@@ -288,5 +288,5 @@ implementation of "expand a feature to its sequence types" instead of three.
   one that was breaking a user-facing feature; the rest are still latent.
 
 Related: `js/modules/shared-results-table.js` (the column registry and why it exists),
-`notes/SHARED_SCOPE_SELECTOR_PLAN.md` (the same "one component, many pages" argument applied to
+`notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md` (the same "one component, many pages" argument applied to
 the scope selector).

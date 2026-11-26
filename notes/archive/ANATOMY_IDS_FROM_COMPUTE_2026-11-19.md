@@ -1,6 +1,6 @@
 # Anatomy (PAGE) IDs vs the Schmidtea crosswalk — answers from compute (2026-11-19)
 
-Reply to `notes/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md`.
+Reply to `notes/archive/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md`.
 
 **Short answer:** most unmapped IDs **were in the input and aligned to the genome**, but where neither
 S3 reference (schMedS3h1 / schMedS3h2) has a gene model, so there is no gene to map them to. A

@@ -12,14 +12,14 @@ There are four notes, all written on **2026-07-14**, and **none of them has been
 
 | Note | What it covers |
 |---|---|
-| `notes/EXPRESSION_DATA_LAYER_PLAN.md` | The shared base layer. Reads bigWigs from the tracks server, scores genes offline with `bigWigAverageOverBed`, saves the results in a per-assembly `expression.sqlite`. No UI. |
-| `notes/EXPRESSION_GENE_PAGE_PLAN.md` | One gene × all tracks, as a section on the gene page. Live reads would take ~16 min per page, so it needs the precomputed results first. |
-| `notes/EXPRESSION_EXPLORER_PLAN.md` | A standalone tool: a gene list × chosen experiments → heatmap or bar chart. |
-| `notes/SRA_RNASEQ_DISCOVERY_PLAN.md` | Finding public RNA-seq for an organism's taxon ID through the ENA API. Only feeds new data in; displays nothing. |
+| `notes/archive/EXPRESSION_DATA_LAYER_PLAN.md` | The shared base layer. Reads bigWigs from the tracks server, scores genes offline with `bigWigAverageOverBed`, saves the results in a per-assembly `expression.sqlite`. No UI. |
+| `notes/archive/EXPRESSION_GENE_PAGE_PLAN.md` | One gene × all tracks, as a section on the gene page. Live reads would take ~16 min per page, so it needs the precomputed results first. |
+| `notes/archive/EXPRESSION_EXPLORER_PLAN.md` | A standalone tool: a gene list × chosen experiments → heatmap or bar chart. |
+| `notes/archive/SRA_RNASEQ_DISCOVERY_PLAN.md` | Finding public RNA-seq for an organism's taxon ID through the ENA API. Only feeds new data in; displays nothing. |
 
 Related notes that touch the same work:
 
-- `notes/NEW_TOOL_SURVEY_AND_RECOMMENDATIONS.md` (2026-08-06) — lists "Expression browser" as a
+- `notes/archive/NEW_TOOL_SURVEY_AND_RECOMMENDATIONS.md` (2026-08-06) — lists "Expression browser" as a
   gap, "planned". Ranks orthology first.
 - `notes/JBROWSE_43_OPPORTUNITIES.md` — mentions JBrowse's hierarchical tree sidebar for
   multiwiggle clusterings as relevant, and searchable faceted track metadata.

@@ -124,7 +124,7 @@ recreated anyway. Also worth deciding `PRAGMA page_size` at the same time (curre
 
 `getParentFeature`, `getFeaturesByType`, `searchFeaturesByUniquename` in
 `lib/database_queries.php`. Not defects; they belong to
-`notes/UNUSED_FUNCTIONS_CLEANUP_PLAN.md`.
+`notes/archive/UNUSED_FUNCTIONS_CLEANUP_PLAN.md`.
 
 ### 5. The finding most worth acting on
 
@@ -217,7 +217,7 @@ Everything below is either committed or waiting. Nothing is half-edited.
 
 ## The three things actually blocking progress
 
-**1. Run the reload.** All code is done; it has never run. `notes/PIPELINE_RELOAD_PLAN.md`
+**1. Run the reload.** All code is done; it has never run. `notes/archive/PIPELINE_RELOAD_PLAN.md`
 has the step-by-step. Untested against real data — no SLURM/genomes/DBI on the webserver.
 Prove one organism first. Halves the databases, 66 GB → ~37 GB.
 
@@ -229,14 +229,14 @@ asking IT for hardware.**
 flash because indexes are 38 GB. That is wrong — actual BLAST index files are **0.3 GB**;
 the 38 GB was mostly sequence data. Eric caught it. Rewrite around Eric's advice: ask for
 **one** thing, 32 GB framed as a reversible test. Full drafts and the growth formula are in
-`notes/IT_REQUEST_RAM_INCREASE.md`.
+`notes/archive/IT_REQUEST_RAM_INCREASE.md`.
 
 ## Then: the actual launch priority, still not started
 
 **Walking every user-facing page for UX and helpful tips.** This is what the session was
 meant to get to. Plan and page checklist: `notes/USER_PAGE_HELP_AUDIT.md`. Seven pages
 have no `(i)` help at all; `index.php` and `parent.php` matter most. Settle the
-search-level-inconsistency semantics (`notes/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`)
+search-level-inconsistency semantics (`notes/archive/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`)
 BEFORE writing help that describes results.
 
 ## Data problems found today, not yet fixed

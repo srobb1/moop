@@ -12,7 +12,7 @@
  * ⚠️ Suggestions only — nothing here ever writes to the groups file. Group membership is
  * editorial: the informal groups (`Sea anemone`, `Corals`, `Bats`) are not required to be
  * taxonomic, and silently auto-adding would make the file untrustworthy. See
- * notes/GROUP_TAXON_CHECKER_PLAN.md.
+ * notes/archive/GROUP_TAXON_CHECKER_PLAN.md.
  *
  * Two bases for a suggestion:
  *

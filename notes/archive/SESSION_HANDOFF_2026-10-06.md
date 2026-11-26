@@ -44,7 +44,7 @@
 - Protein Features: SignalP, DeepTMHMM and a new DeepLoc table (all proteins) as their own annotation type (3573ca0).
 - New statement kind `protein` (order 5; later kinds +1): the protein a name rests on, its mRNA and lengths (0b8e385).
 - "MOOP name" statement without evidence codes (4f38368).
-- notes/ANNOTATION_SCORES.md: what every table's Score holds, for the site's score lookup.
+- notes/archive/ANNOTATION_SCORES.md: what every table's Score holds, for the site's score lookup.
 - Congeria on the site now has all of this (audit 92/92, naming replays 43,768). The previous site version is
   `organism.sqlite.before_2026-10-06c`. Every other organism needs a --reload rebuild for the InterProScan fix too.
 - Stopping a build: kill its process group, not only the parent (a loader survived once; harmless under --reload).
@@ -57,4 +57,4 @@
   Count how many genes it would touch before deciding. Names would not change.
 - Optional cleanup: 26 harmless reused variable names and 8 unused variables (Perl::Critic, ~/perl5/bin/perlcritic).
 - Site side (other agent): protein lengths for every protein on the gene page (protein.aa.fa.fai column 2);
-  score lookup from notes/ANNOTATION_SCORES.md; "Isoform" label for kind `protein`.
+  score lookup from notes/archive/ANNOTATION_SCORES.md; "Isoform" label for kind `protein`.

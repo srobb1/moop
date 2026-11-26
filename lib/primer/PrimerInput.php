@@ -3,7 +3,7 @@
  * PrimerInput - parse user-supplied primers into pairs.
  *
  * Accepts four shapes and detects which was given rather than making the user
- * declare it (see notes/PRIMER_BLAST_TOOL_PLAN.md §INPUT RULES):
+ * declare it (see notes/archive/PRIMER_BLAST_TOOL_PLAN.md §INPUT RULES):
  *
  *   1. FASTA, one primer per record      -> paired by name suffix, else adjacency
  *   2. FASTA, both primers in one record -> split on a run of N (>= N_SEPARATOR_MIN)

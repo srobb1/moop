@@ -132,5 +132,5 @@ SELECT COUNT(*) FROM annotation_source
 ```
 
 Related: `scripts/check_sequence_id_match.sh` (the RefSeq CDS FASTA mismatch, same build
-pipeline), `notes/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`, and the memory note "annotations
+pipeline), `notes/archive/SEARCH_FEATURE_LEVEL_INCONSISTENCY.md`, and the memory note "annotations
 attach to mRNA".

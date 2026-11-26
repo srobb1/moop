@@ -78,5 +78,5 @@ very top, above everything, regardless of recency or severity.**
 4. Item 4 (grouping).
 5. Items 6 + 7 (feed + rotation — larger, scope each on its own).
 
-Related: [PAGE_BY_PAGE_AUDIT_PLAN.md](PAGE_BY_PAGE_AUDIT_PLAN.md) (#13 registry perm bug is the same
+Related: [PAGE_BY_PAGE_AUDIT_PLAN.md](archive/PAGE_BY_PAGE_AUDIT_PLAN.md) (#13 registry perm bug is the same
 "apache can't write a file" class the permissions category is meant to surface loudly).

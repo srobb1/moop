@@ -2,7 +2,7 @@
 /**
  * PRIMER BLAST - check primer pairs against a genome and transcriptome.
  *
- * Answers three things for each pair, per notes/PRIMER_BLAST_TOOL_PLAN.md:
+ * Answers three things for each pair, per notes/archive/PRIMER_BLAST_TOOL_PLAN.md:
  *   - how many products would form
  *   - where each one lands
  *   - how big each one is, and with how many mismatches

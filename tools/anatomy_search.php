@@ -2,7 +2,7 @@
 /**
  * Anatomical Expression Search -- where genes were published as expressed (curated records; on
  * simrbase the data source is PAGE, Planarian Anatomy Gene Expression -- set per organism).
- * Plan: notes/PLANOSPHERE_PAGE_ROSETTA_PLAN.md. Pick a term (ontology term box) and a relationship;
+ * Plan: notes/archive/PLANOSPHERE_PAGE_ROSETTA_PLAN.md. Pick a term (ontology term box) and a relationship;
  * the search covers the term and everything related to it (lib/ontologies.php), and lists the
  * curations recorded in any of those terms (lib/anatomy_expression.php). Evidence filter groups
  * come from ECO itself. Gene links (Rosetta Stone) come in the next step. Not in a menu yet.

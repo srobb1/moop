@@ -29,7 +29,7 @@ before optimising SQL.
 
 | # | Lever | Effect |
 |---|---|---|
-| 1 | **More RAM** (16 → 64 GB; it is a VM) | After the shrink below, the whole corpus caches and the penalty disappears rather than shrinking. See `notes/IT_REQUEST_RAM_INCREASE.md`. |
+| 1 | **More RAM** (16 → 64 GB; it is a VM) | After the shrink below, the whole corpus caches and the penalty disappears rather than shrinking. See `notes/archive/IT_REQUEST_RAM_INCREASE.md`. |
 | 2 | **Flash-backed storage**, or lvmcache/bcache in front of the spinning volume | 50–100× on cold seeks. Confirm with IT whether `ROTA=1` is real or a virtualisation artifact. |
 | 3 | **Contentless FTS5** — applied | 17–45% off every database (~20 GB corpus-wide). |
 | 4 | `VACUUM` after rebuilds | Freed pages are only returned to the filesystem by VACUUM. Also makes cold reads sequential. |

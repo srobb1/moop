@@ -44,7 +44,7 @@
           <?php /* "Refine selection", just under the search box: what the group search covers.
                    Closed by default -- the search starts on every organism in the group.
                    Replaces the cards' "In search" bars and the pop-up tree (2026-11-16,
-                   notes/SHARED_SCOPE_SELECTOR_PLAN.md). */ ?>
+                   notes/archive/SHARED_SCOPE_SELECTOR_PLAN.md). */ ?>
           <div class="mt-3">
           <?php
           $scope_opts = [

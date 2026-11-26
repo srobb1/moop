@@ -38,8 +38,9 @@ new run replaces one file and no `organism.sqlite` is rebuilt. Same pattern as `
 organisms/.clades/<clade>/homologs.sqlite        e.g. organisms/.clades/planarians/homologs.sqlite
 ```
 
-- `<clade>` = the run's folder name (`[A-Za-z0-9_-]`): `planarians`, `hexacorallia`, `edwardsiidae`,
-  `ray_finned_fish`, later `bats`.
+- `<clade>` = the run's folder name (`[A-Za-z0-9_-]`): `planarians`, `hexacorallia`, `ray_finned_fish`,
+  later `bats`. (`edwardsiidae`, a two-species run, was dropped 2026-11-13: both species are in
+  hexacorallia, and two species with no outgroup over-call orthologs.)
 - The folder starts with a dot **on purpose**: everything that lists organisms skips dot-folders
   (`.retired`, `.cache`). A `_clades/` would show up as an organism.
 - nginx already denies `organisms/` to the web; pages open the file read-only.
@@ -115,7 +116,29 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 | `taxon_id` | NCBI taxon of the clade, if any |
 | `method`, `method_version` | e.g. `OrthoFinder` / `3.1.2`, or `FastOMA` / … — shown on the card. (Older files have only `orthofinder_version`; still read.) |
 | `run_date`, `built_at` | ISO 8601 |
+| `outgroups`, `orthofinder_clade_node` | only when the run had outgroups: scientific names, comma-separated (`Lepisosteus oculatus`), and the clade's node in OrthoFinder's tree (`N1`). See §Outgroups |
 | `genes`, `orthogroups`, `hogs_n0`, `pairs` | counts (informational; the site checks they are > 0) |
+
+## Outgroups (compute, 2026-11-13)
+
+A run may include 1-3 **outgroup** species just outside the clade, so OrthoFinder has a rooted species
+tree and something to measure duplications against. Outgroups are in the run and nowhere in the file:
+no `member`, `gene`, `hog`, `node` or `pair` rows. Live: hexacorallia (outgroup *Turritopsis dohrnii*),
+ray_finned_fish (*Lepisosteus oculatus*, spotted gar, before the teleost genome duplication; the clade
+is labelled `Teleost fish (Teleostei)`, taxon 32443); planarians none (18 species is enough).
+
+- The clade's node is still `N0` in the file and its HOGs `N0.HOG<n>` (OrthoFinder's `N1.tsv` numbers).
+  Orthogroups too small for a gene tree get the next numbers; `hog_source` says which.
+- `gene.orthogroup` stays OrthoFinder's orthogroup, which with an outgroup spans the outgroup too, so one
+  orthogroup can hold several N0 HOGs. **Group by N0 HOG for "same gene family in this clade", never by
+  orthogroup.**
+- OrthoFinder writes no pairs for orthogroups under 4 genes unless single-copy in every species. The
+  builder adds `1:1` pairs for an orthogroup with no pairs and one gene per member present (fish +3,146,
+  hexacorallia +3,422; planarians not yet rebuilt with it).
+- **One organism, two members:** planarians has `Romankenkius_sp` twice (gene sets `ro03.kc1` and
+  `ro39.kc1`). A gene can then have two `1:1` partners in that organism, one per gene
+  set; that is correct, not the old builder bug (checked 2026-11-25: 0 genes with more than one `1:1`
+  partner per gene set in any of the three live files).
 
 Gene trees are not part of format 1 or 2 (they stay in `results_path` on compute). If wanted later: a
 separate file per orthogroup beside the SQLite, named in a new table — format `clade_homologs/3`.

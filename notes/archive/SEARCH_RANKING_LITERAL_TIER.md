@@ -146,7 +146,7 @@ correctly as adjacency + order.
   dying"; server was healthy moments later. Unconfirmed — reproduce on a cold organism.
 - **Benchmarks evict the cache brutally.** `crossorg.py` took page cache 12.2 GB → 0.3 GB;
   2.5 h later only 6.6 GB. Warming 49 bat organisms took 226 s. Do not run cross-organism
-  benchmarks while anyone is using the site. See `notes/STORAGE_AND_RAM_TESTING.md`.
+  benchmarks while anyone is using the site. See `notes/archive/STORAGE_AND_RAM_TESTING.md`.
 
 ---
 

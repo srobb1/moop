@@ -159,7 +159,7 @@ streaming, which is only acceptable if it is genuinely fast.
 
 ## 6. Related correction
 
-`notes/IT_REQUEST_SEND.md` (commit `b846585`) argues the working set "did not last the
+`notes/archive/IT_REQUEST_SEND.md` (commit `b846585`) argues the working set "did not last the
 afternoon". On 2026-07-31 the same piwi/Bats search survived **13.8 hours** — 1.31 s, 0 MB,
 0 refaults. Elapsed time evicts nothing; competing reads do (in the original 2.5 h window
 `Cached` went 2.1 → 11.8 GB, ~10 GB of other reading). **That document is refutable as

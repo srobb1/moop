@@ -156,7 +156,7 @@ where they are. But it needs decisions before building:
 Recommend building pieces 1 and 2 first (pure UI, no new infra), and treating piece 3 as a
 follow-up once the use-case data model exists for a submission to slot into.
 
-Related: `notes/GROUP_TAXON_CHECKER_PLAN.md` (same "admin reviews a queue" shape for
+Related: `notes/archive/GROUP_TAXON_CHECKER_PLAN.md` (same "admin reviews a queue" shape for
 piece 3), the help toolkit in `lib/help_ui.php`.
 
 ---

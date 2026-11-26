@@ -242,7 +242,7 @@ Congeria (new code, human + Swiss-Prot DIAMOND): OMA 1:1 3,668 · many:1 1,331 �
 16. Kept (HGNC domain groups read as "… family member").
 17. TE names stay step 6.
 - Methods doc rewritten (notes/GENE_NAMING_METHODS.md, as of 2026-09-28); Gene Name Source / Closest Gene
-  descriptions updated in notes/annotation_config_descriptions.json.
+  descriptions updated in notes/archive/annotation_config_descriptions.json.
 - DIAMOND targets: human 50, others 5 (depth/ measurement: 5 → 2nd gene visible 77.7%, 25 → 99.4%, 50 → 100%).
 
 ## Test bug found and fixed (both test suites)

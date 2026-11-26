@@ -1,7 +1,7 @@
 # Where we stopped, Friday 2026-10-02 (~16:40)
 
 ## 1. Code: branch `cokus-review-2026-10-02` in moop-pipeline, committed 09f6ccd (not pushed, not merged)
-Committed 2026-10-02 at the user's request. Details: `notes/COKUS_REVIEW_2026-10-02.md`, `notes/GENE_NAMING_METHODS.md`.
+Committed 2026-10-02 at the user's request. Details: `notes/archive/COKUS_REVIEW_2026-10-02.md`, `notes/GENE_NAMING_METHODS.md`.
 - Fixes: statements follow the named gene; ortholog/co-ortholog wording; DIAMOND and EggNOG source versions; homolog
   tables keep the top hit; the loader no longer wipes gene statements (`*.domains.moop.tsv` glob); colon in a
   Swiss-Prot name; trailing space in HGNC names; `COLUMNS` variable and `peptide.dmnd` path in the DIAMOND scripts.
@@ -48,7 +48,7 @@ Analysis folder: `.../SBGENOMES_2026-05-21/Danio_rerio/GRCz11/20260404/` (script
 - Cluster: 350 CPUs per user while classes run (compute-busy), 500 otherwise; interactive sessions count; weekends are clear.
 
 ## 5. Closest-species searches ("extra BLASTs"): planned, not run
-Plan: `notes/CLOSEST_SPECIES_NOTES_2026-10-02.md`. Proteomes: `dev/smr_dev/moop/closest_species/README.md`.
+Plan: `notes/archive/CLOSEST_SPECIES_NOTES_2026-10-02.md`. Proteomes: `dev/smr_dev/moop/closest_species/README.md`.
 Open: which Schmidtea mediterranea annotation is the flatworms' partner; koala or opossum for the wallaby.
 
 ## 6. Open questions for the user

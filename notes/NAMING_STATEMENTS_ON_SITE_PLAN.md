@@ -1,6 +1,6 @@
 # Naming annotations on the site — plan (2026-10-01)
 
-Site-side companion to `notes/NAMING_ANNOTATIONS_FOR_THE_SITE_2026-10-01.md` (on branch
+Site-side companion to `notes/archive/NAMING_ANNOTATIONS_FOR_THE_SITE_2026-10-01.md` (on branch
 `naming-v2`; not on `main` yet). That note says what the pipeline loads. This one says what the
 site has to change so the four new annotation types appear **only** where intended.
 
@@ -162,7 +162,7 @@ Steps 1–3 must be on `main` and live before step 4.
 ## Related, same file
 
 `tools/pages/parent.php:517` still fatals on gene sets with no GFF (17 organisms; see
-`notes/SESSION_HANDOFF_2026-09-17.md`). The overview work touches the same template; fix it
+`notes/archive/SESSION_HANDOFF_2026-09-17.md`). The overview work touches the same template; fix it
 first so the new card can be checked on those organisms too.
 
 ---

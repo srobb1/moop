@@ -32,7 +32,7 @@ and the InterMine platform (which underpins PlanMine, FlyMine, WormMine, YeastMi
 | Assembly converter / liftOver | Ensembl, UCSC | ❌ needs chain files MOOP does not have |
 | ID history converter | Ensembl | ❌ presupposes stable release-to-release IDs |
 | VEP / variant tools | Ensembl, UCSC | ❌ MOOP holds no variant data |
-| Expression browser | most MODs | ❌ planned — `notes/EXPRESSION_EXPLORER_PLAN.md` |
+| Expression browser | most MODs | ❌ planned — `notes/archive/EXPRESSION_EXPLORER_PLAN.md` |
 | CRISPR guide design | FlyBase/WormBase (mostly as outbound links) | ❌ |
 | REST API / web services | everyone | ⚠️ partial |
 
@@ -99,7 +99,7 @@ no reload.
    The data is loaded and the join is verified (§2). Start by measuring the cold fan-out.
 2. **Primer / in-silico PCR tool** — the user's own idea, and they have Perl for it. UCSC ranking
    in-silico PCR among its five main tools confirms the demand is not niche.
-   `notes/PRIMER_BLAST_TOOL_PLAN.md` already specs the hit-pairing and product-size half;
+   `notes/archive/PRIMER_BLAST_TOOL_PLAN.md` already specs the hit-pairing and product-size half;
    Primer3 extends it from *"where do my primers land"* to *"design me primers."*
    **RT-PCR primers are a real differentiator** — exon-junction-spanning design needs exon
    coordinates, and MOOP has them (`feature_coords.tsv`, plus the GFF).
@@ -143,8 +143,8 @@ across organisms"), so §3.1 may give it its home.
 
 ## Related
 
-`notes/PRIMER_BLAST_TOOL_PLAN.md` (the pairing/product-size half of recommendation 2),
-`notes/USE_CASES_AND_HELP_ROUTER_PLAN.md` (the work that was scheduled for today),
+`notes/archive/PRIMER_BLAST_TOOL_PLAN.md` (the pairing/product-size half of recommendation 2),
+`notes/archive/USE_CASES_AND_HELP_ROUTER_PLAN.md` (the work that was scheduled for today),
 `notes/QUERY_PERFORMANCE.md` and `notes/SEARCH_COST_MODEL_2026-07-31.md` (the fan-out cost any
-cross-organism tool inherits), `notes/EXPRESSION_EXPLORER_PLAN.md`,
+cross-organism tool inherits), `notes/archive/EXPRESSION_EXPLORER_PLAN.md`,
 `config/tools_config.php` (where a new tool gets registered).

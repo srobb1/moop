@@ -47,7 +47,7 @@ The web looks an ID up by name alone, so a record can show a gene from the wrong
 Fincher 2018 Contig IDs (e.g. `Contig10252`) are in no source at all — which assembly are they?
 
 ## Full list
-`notes/ANATOMY_UNMAPPED_IDS_2026-11-19.tsv` — paper, PMID, ID, record count, whether the ID is a
+`notes/archive/ANATOMY_UNMAPPED_IDS_2026-11-19.tsv` — paper, PMID, ID, record count, whether the ID is a
 feature in organism.sqlite. Mapped = in the 11-11 crosswalk by name, or a gene whose transcript is.
 **No gene-name column:** MOOP's copy of the PAGE curations (anatomy_expression.sqlite, table
 `curation`) stores no gene name -- only accession, term, evidence, stage, specimen, PMID. If the PAGE
